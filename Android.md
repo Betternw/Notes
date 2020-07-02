@@ -9,7 +9,7 @@
  * #### [Dialog](#7)
 ## <span id = "1">快捷键</span>
 alt+enter：错误纠正
-## <span id = "2>第一章</span>
+## <span id = "2">第一章</span>
 1. android系统架构：Linux内核层、系统运行库层、应用框架层（API）、应用层）
 2. adb指令：
 * adb kill-server  杀死服务
@@ -355,7 +355,114 @@ startActivity(intent);
 7. Activity启动模式——singleInstance
 * 打开新的，会重新新建一个栈 
 8. 生命周期 on Create() on Start() onResume() onPause() onStop() onDestory() onRestart()
-9. 
+9. Activity之间的数据传递
+* 使用intent
+``` java
+//MainActivity中：
+  private void initViews() {
+        findViewById(R.id.buttonActivity).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                //提取intent
+                final Intent intent = new Intent(MainActivity.this, SecondActivity.class);
+                intent.putExtra(BUTTON_TITLE,getString(R.string.imooc_title));
+                startActivity(intent);
+
+//SecondActivity中：
+ protected void onCreate(@Nullable Bundle savedInstanceState) {
+     //接收数据
+             if (getIntent() != null) {
+                String buttonTitle = getIntent().getStringExtra(MainActivity.BUTTON_TITLE);
+                button.setText(buttonTitle);        
+
+ }
+```
+* 使用Bundle
+``` java
+//MainActivity中：
+  private void initViews() {
+        findViewById(R.id.buttonActivity).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                            //Bundle类似HashMap
+                Bundle bundle = new Bundle();
+                bundle.putString(BUTTON_TITLE, getString(R.string.imooc_title));
+                intent.putExtra(BUTTON_TITLE, bundle);
+                startActivity(intent);}
+//SecondActivity中：
+ protected void onCreate(@Nullable Bundle savedInstanceState) {
+             //接收数据
+        if (getIntent() != null) {
+            Bundle bundle = getIntent().getBundleExtra(MainActivity.BUTTON_TITLE);
+            if (bundle != null) {
+                String buttonTitle = bundle.getString(MainActivity.BUTTON_TITLE);
+                button.setText(buttonTitle);
+            }
+
+ }
+
+```
+* 序列化
+``` java
+//MainActivity中：
+  private void initViews() {
+        findViewById(R.id.buttonActivity).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+             //序列化
+                intent.putExtra(BUTTON_TITLE, new User());
+                startActivity(intent);
+            }
+//User中：
+//必须继承Serializable
+public class User implements Serializable{
+    public String title="这是第三种方式默认标题";
+}
+ //SecondActivity中：
+ protected void onCreate(@Nullable Bundle savedInstanceState) {
+            User user=(User) (getIntent().getSerializableExtra(MainActivity.BUTTON_TITLE));
+            button.setText(user.title);*/
+        }
+
+
+
+```
+* 第二个页面结束时传值回第一个页面
+``` java
+ //SecondActivity中：
+   protected void onCreate(@Nullable Bundle savedInstanceState) {
+        //结束时传回
+        final Button button = (Button) findViewById(R.id.buttonFinish);
+        button.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent();
+                intent.putExtra("imooc", "imooc+慕课网");
+                setResult(RESULT_OK, intent);
+                finish();
+            }
+        });
+//MainActivity中：
+//1. startActivityForResult
+//2. 第二个页面setResult
+
+  Bundle bundle = new Bundle();
+                bundle.putString(BUTTON_TITLE, getString(R.string.imooc_title));
+                intent.putExtra(BUTTON_TITLE, bundle);
+                startActivityForResult(intent, 999);
+//3. onActivityResult
+protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        //请求数据与返回的匹配
+        if (requestCode == 999 && resultCode == RESULT_OK) {
+             if(data!=null){
+                //setTitle("前一个页面回来了");
+                setTitle(data.getStringExtra("imooc"));
+                
+            }
+        }
+    }
+```
 ### <span id = "6">Menu</span>
 1. 选项菜单（OptionMenu）
 * 操作栏中间
