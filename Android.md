@@ -3,10 +3,10 @@
 ### * [第一章 杂](#2)
 ### * [UI基础](#3)     
 ### * [常用组件](#4)
-* [Activity](#5)
+ * #### [Activity](#5)
 
- * [Menu](#6)
-* [Dialog](#7)
+ * #### [Menu](#6)
+ * #### [Dialog](#7)
 ## <span id = "1">快捷键</span>
 alt+enter：错误纠正
 ## <span id = "2>第一章</span>
