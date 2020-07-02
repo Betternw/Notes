@@ -1,8 +1,14 @@
 ## 目录
-* [快捷键](#1)
+### * [快捷键](#1)
+### * [第一章 杂](#2)
+### * [UI基础](#3)     
+### * [常用组件](#4)
+    - [Activity](#5)
+    - [Menu](#6)
+    - [Dialog](#7)
 ## <span id = "1">快捷键</span>
 alt+enter：错误纠正
-## 第一章
+## <span id = "2>第一章</span>
 1. android系统架构：Linux内核层、系统运行库层、应用框架层（API）、应用层）
 2. adb指令：
 * adb kill-server  杀死服务
@@ -47,7 +53,7 @@ Toast.makeText（this/父类.this（看传入的对象是在哪个类中），�
 * dp：会根据屏幕分辨率进行改变，都用这个
 * sp：给一个textview文字设置大小
 13. 一个活动对应一个布局。活动与用户界面进行交互。
-## UI基础
+## <span id = "3">UI基础</span>
 1. Activity：可视化界面
 2. setContentView：设置内容视图，传入的参数就是要加载的布局。
 3. R：为每一个资源文件按类别分配索引。通过R.类别名.资源名去操作对应的资源。
@@ -329,8 +335,8 @@ seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 * 初始化数据
 * 为控件添加监听器
 
-### 常用组件
-### Activity
+### <span id = "4">常用组件</span>
+### <span id = "5"> Activity</span>
 1. 一个页面就是一个Activity
 2. 启动那个Activity，哪个注册intent-filter
 3. Activity跳转：使用Intent
@@ -347,7 +353,7 @@ startActivity(intent);
 * 如果复用Activity，会清除前面的
 7. Activity启动模式——singleInstance
 * 打开新的，会重新新建一个栈
-###  Menu
+### <span id = "6">Menu</span>
 1. 选项菜单（OptionMenu）
 * 操作栏中间
 * 创建菜单和加载菜单资源
@@ -488,7 +494,7 @@ menu.show();
 5. onOptionsItemSelected方法返回true
 6. onOptionsItemSelected最后需要 调用父类的默认实现  default：super.onOptionsItemSelected(item)
 
-###  Dialog
+###  <span id = "7">Dialog</span>
 1. AlertDialog——弹出式对话框
 * 创建对象
 ```java
