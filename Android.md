@@ -353,7 +353,9 @@ startActivity(intent);
 6. Activity启动模式——singleTask
 * 如果复用Activity，会清除前面的
 7. Activity启动模式——singleInstance
-* 打开新的，会重新新建一个栈
+* 打开新的，会重新新建一个栈 
+8. 生命周期 on Create() on Start() onResume() onPause() onStop() onDestory() onRestart()
+9. 
 ### <span id = "6">Menu</span>
 1. 选项菜单（OptionMenu）
 * 操作栏中间
