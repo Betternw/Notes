@@ -78,7 +78,7 @@ Toast.makeText（this/父类.this（看传入的对象是在哪个类中），�
 * 相对于父容器：android:layout_alignParentRight（上下左右居中）=true/false
 * 相对于其他控件：android:layout_toRightOf/above/below="@id/其他id”——要用到其他控件的id。
 android:layout_alignTop：和上边线对齐
-#### 基础控件
+### 基础控件
 1. 控件：View
 2. 通用属性
 * android:layout_width：match—填充 wrap—根据内容确定 dp：精确大小
@@ -327,8 +327,8 @@ seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 * 初始化数据
 * 为控件添加监听器
 
-#### 常用组件
-##### 组件一：Activity
+### 常用组件
+### Activity
 1. 一个页面就是一个Activity
 2. 启动那个Activity，哪个注册intent-filter
 3. Activity跳转：使用Intent
@@ -345,7 +345,7 @@ startActivity(intent);
 * 如果复用Activity，会清除前面的
 7. Activity启动模式——singleInstance
 * 打开新的，会重新新建一个栈
-#####  Menu
+###  Menu
 1. 选项菜单（OptionMenu）
 * 操作栏中间
 * 创建菜单和加载菜单资源
@@ -486,7 +486,7 @@ menu.show();
 5. onOptionsItemSelected方法返回true
 6. onOptionsItemSelected最后需要 调用父类的默认实现  default：super.onOptionsItemSelected(item)
 
-#####  Dialog
+###  Dialog
 1. AlertDialog——弹出式对话框
 * 创建对象
 ```java
@@ -605,7 +605,7 @@ window.setAnimationStyle(R.style.translate_anim);
 ```
 * 显示
 ```java
-//3. 显示 （参数1：锚，参照物 参数2 3：相对于锚在xy方向的偏移量）
+//3. 在参照物控件的下方显示 （参数1：锚，参照物 参数2 3：相对于锚在xy方向的偏移量）
 window.showAsDropDown(view,-190,0);
 
 //为弹窗中文本添加点击事件 注意是popup里的视图调用
@@ -633,4 +633,41 @@ v.findViewById(R.id.copy).setOnClickListener(new View.OnClickListener() {
     }
 });
 ```
+4. ArrayAdapter——数组适配器，只能显示单一的文本
+* id注册
+```java
+case R.id.arrayAdapter_btn:
+                showArrayDialog();
+                break;
+```
+* 设置ArrayDialog
+```java
+ private void showArrayDialog() {
+        final String[] items = {"Java","Mysql","Android","HTML","C","JavaScript"};
+        //数组适配器
+        //参数1：环境
+        //参数2：布局资源索引，指的是每一项数据所呈现的样式
+        //参数3：数据源，集合或者数组
+//        ArrayAdapter adapter = new ArrayAdapter(this,android.R.layout.simple_dropdown_item_1line,items);
+        //参数3：int textviewid 指定文本你需要放在布局中对应id文本控制的位置
+        ArrayAdapter adapter = new ArrayAdapter(this,R.layout.array_item_layout,R.id.item_txt,items);
+        //实例化Builder
+        AlertDialog.Builder builer = new AlertDialog.Builder(this)
+                .setTitle("请选择")
+                //参数1：适配器对象（对数据显示样式的规则制定器）
+                //参数2：监听器
+                .setAdapter(adapter, new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        Toast.makeText(MainActivity.this,items[i],Toast.LENGTH_SHORT).show();
+                        //对话框消失
+                        dialogInterface.dismiss();
+                    }
+                });
+        builer.show();
+    }
+```
+
+### Activity
+
 
