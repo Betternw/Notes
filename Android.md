@@ -818,15 +818,22 @@ case R.id.arrayAdapter_btn:
         setContentView(R.layout.activity_static_load_fragment);
     }
 }
-   ```
+   
    ``` java
-   //创建activity_static_load_fragment
+      //3. 创建activity_static_load_fragment
       <fragment
        android:id="@+id/listFragment"
        android:name="iom.imooc.fragmentdemo.ListFragment"
        android:layout_width="100dp"
        android:layout_height="100dp"/>
-   ```
+    ```
+    
+    ``` java
+
+     ```  
+   
+
+
 
    * 动态加载：java文件   
 
