@@ -4,9 +4,9 @@
 ### * [UI基础](#3)     
 ### * [常用组件](#4)
  * #### [Activity](#5)
-
  * #### [Menu](#6)
  * #### [Dialog](#7)
+ * #### [Fragment](#8)
 ## <span id = "1">快捷键</span>
 alt+enter：错误纠正
 ## <span id = "2">第一章</span>
@@ -786,6 +786,49 @@ case R.id.arrayAdapter_btn:
     }
 ```
 
-### Activity
+###  <span id = "8">Fragment</span>
+1. 设计思想
+   * 一个Activity中放置运行多个Fragment，可以根据不同的分辨率进行页面的拆分
+   * Fragment必须放在Activity中
+2. 生命周期
+3. 加载
+   * 静态加载：xml文件
+   ``` java
+   //1. 在MainActiyity中设置点击事件，由MainActivity跳到StaticLoadFragmentActivity
+      protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        // find views on onclick event 静态加载
+        findViewById(R.id.textView).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // static load fragment.
+            startActivity(new Intent(MainActivity.this, StaticLoadFragmentActivity.class));
+            }
+        });
+   ```
+   
+   ``` java
+   //2. 创建StaticLoadFragmentActivity，加载布局
+   public class StaticLoadFragmentActivity extends AppCompatActivity{
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_static_load_fragment);
+    }
+}
+   ```
+   ``` java
+   //创建activity_static_load_fragment
+      <fragment
+       android:id="@+id/listFragment"
+       android:name="iom.imooc.fragmentdemo.ListFragment"
+       android:layout_width="100dp"
+       android:layout_height="100dp"/>
+   ```
+
+   * 动态加载：java文件   
+
 
 
