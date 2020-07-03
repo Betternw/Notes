@@ -862,7 +862,7 @@ android:layout_height="100dp"/>
 ```  
    * 动态加载：java文件（比如在本页面设置两个fragment）  
     
-    ```java
+   ``` java
    // 1.在要加载的页面设置container（用LinearLayout）
        <LinearLayout
         android:orientation="horizontal"
