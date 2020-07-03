@@ -809,7 +809,8 @@ case R.id.arrayAdapter_btn:
         });
    ```
    
-   ``` java
+   
+``` java
    //2. 创建StaticLoadFragmentActivity，加载布局
    public class StaticLoadFragmentActivity extends AppCompatActivity{
     @Override
@@ -818,24 +819,212 @@ case R.id.arrayAdapter_btn:
         setContentView(R.layout.activity_static_load_fragment);
     }
 }
+```
    
-   ``` java
-      //3. 创建activity_static_load_fragment
-      <fragment
-       android:id="@+id/listFragment"
-       android:name="iom.imooc.fragmentdemo.ListFragment"
-       android:layout_width="100dp"
-       android:layout_height="100dp"/>
-    ```
+``` java
+//3. 创建activity_static_load_fragment，用这个fragment加载一个Activity
+<fragment
+android:id="@+id/listFragment"
+android:name="iom.imooc.fragmentdemo.ListFragment"
+android:layout_width="100dp"
+android:layout_height="100dp"/>
+
+<fragment
+android:id="@+id/detailFragment"
+android:name="iom.imooc.fragmentdemo.ListFragment"
+android:layout_centerInParent="true"
+android:layout_width="100dp"
+android:layout_height="100dp"/>
+```
     
-    ``` java
+``` java
+//4. 创建ListFragment和fragment_list.layout。每个fragment都可以加载一个fragment_list.layout
+    public class ListFragment extends Fragment {
+        public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        // 布局文件；当前所在group;绑定当前根布局
+        //返回布局渲染的视图view
+        View view = inflater.inflate(R.layout.fragment_list, container, false);
+        //对控件的处理
+        //必须是new出来的根视图view进行id的find
+        TextView textView = view.findViewById(R.id.textView);
+        textView.setText(mTitle);
+        return view;
+        }
 
+         <TextView
+        android:id="@+id/textView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_centerInParent="true"
+        android:text="TextView"
+        android:textColor="#FFFFFF"
+        android:textSize="20sp"/>
      ```  
-   
+  
+  
+   * 动态加载：java文件（比如在本页面设置两个fragment）  
+   ```java
+   // 1.在要加载的页面设置container（用LinearLayout）
+       <LinearLayout
+        android:orientation="horizontal"
+        android:id="@+id/listContainer"
+        android:layout_width="150dp"
+        android:layout_margin="1dp"
+        android:layout_height="match_parent">
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:orientation="horizontal"
+        android:id="@+id/detailContainer"
+        android:layout_width="200dp"
+        android:layout_margin="1dp"
+        android:layout_height="match_parent">
+
+    </LinearLayout>
+   ```
+   ```java
+   //2. 编写fragment
+   public class ListFragment extends Fragment {
+
+   ```
+   ```java
+   //3. 将fragment装入container中
+    // 1. container  2. fragment  3. fragment-->container
+        // activity--->fragment value
+        ListFragment listFragment = ListFragment.newInstance("list");
+        getSupportFragmentManager()
+                .beginTransaction()//开启事物，将fragment放在草container中
+                .add(R.id.listContainer, listFragment)//add remove replace
+                .commit();
+        listFragment.setOnTitleClickListener(this);
+
+        ListFragment detail = ListFragment.newInstance("detail");
+        getSupportFragmentManager()
+                .beginTransaction()
+                .add(R.id.detailContainer, detail)//和上面不能是同一个fragment，一个fragment只能加载一个fragment
+                .commit();
+
+        detail.setOnTitleClickListener(this);
+
+   ```
+4. 传值
+* Activity向Fragment传值
+``` java
+//ListFragment:
+    //传值 传入
+    public static ListFragment newInstance(String title){
+        ListFragment fragment = new ListFragment();
+        Bundle bundle = new Bundle();
+        bundle.putString(BUNDLE_TITLE, title);
+        fragment.setArguments(bundle);
+        return fragment;
+    }
+    //接收数据
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        if(getArguments() != null){
+            mTitle = getArguments().getString(BUNDLE_TITLE);
+        }
+    }
+     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        View view = inflater.inflate(R.layout.fragment_list, container, false);
+        TextView textView = view.findViewById(R.id.textView);
+        //参数是接收传进的参数
+        textView.setText(mTitle);...}
+```
+```java
+//MainActivity:
+       //传入对象 list和detail
+       ListFragment listFragment = ListFragment.newInstance("list");
+        getSupportFragmentManager()
+                .beginTransaction()//开启事物，将fragment放在草container中
+                .add(R.id.listContainer, listFragment)
+                .commit();
+        listFragment.setOnTitleClickListener(this);
+
+        ListFragment detail = ListFragment.newInstance("detail");
+        getSupportFragmentManager()
+                .beginTransaction()
+                .add(R.id.detailContainer, detail)//和上面不能是同一个fragment，一个fragment只能加载一个fragment
+                .commit();
+```
+* Fragment向Activity传值——回调接口
+   * 步骤：
+     1. 类A：定义接口，定义接口类型变量（接受传值并设置事件），定义方法C（设置接口的方法），参数为接口类型变量并为接口变量赋值
+     2. 类B继承接口，类A对象调用方法C，参数是this（传值），重写接口方法——最终呈现的效果
+     3. 类A目标对象（触发事件的对象）当方法c的对象存在的时候，实现监听器，回调（实现）接口方法，将需要的参数传进去。
+     * （接口，观察者，实现者：定义接口，实现者传值并定义方法的最终实现形式，观察者当接收到实现者的对象时，将参数传给方法，方法实现）
+```java
+//ListFragment:
+    // 2. 设置参数为接口类型的函数
+    public void setOnTitleClickListener(OnTitleClickListener onTitleClickListener) {
+        this.mOnTitleClickListener = onTitleClickListener;
+    }
+
+    // 定义变量 接口对象
+    private OnTitleClickListener mOnTitleClickListener;
+
+    // 1. 定义接口
+    public interface OnTitleClickListener{
+        void onClick(String title);
+    }
+
+     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        // 布局文件；当前所在group;绑定当前根布局
+        //返回布局渲染的视图view
+        View view = inflater.inflate(R.layout.fragment_list, container, false);
+
+        //对控件的处理
+        //必须是new出来的根视图view进行id的find
+        TextView textView = view.findViewById(R.id.textView);
+
+        //参数是接收传进的参数
+        textView.setText(mTitle);
+
+        //5. 回调实现的接口中的方法（textview被点击时）
+        textView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(mOnTitleClickListener != null){
+                    mOnTitleClickListener.onClick(mTitle);
+                }
+            }
+        });
+
+        return view;
+    }
+```
+```java
+//MainActivity:
+//3. MainActivity实现接口
+ public class MainActivity extends AppCompatActivity  implements ListFragment.OnTitleClickListener{
+
+}
+        ListFragment listFragment = ListFragment.newInstance("list");
+        getSupportFragmentManager()
+                .beginTransaction()//开启事物，将fragment放在草container中
+                .add(R.id.listContainer, listFragment)
+                .commit();
+        //4. 调用（参数为接口类型的）函数，参数为自身
+        listFragment.setOnTitleClickListener(this);
+
+        ListFragment detail = ListFragment.newInstance("detail");
+        getSupportFragmentManager()
+                .beginTransaction()
+                .add(R.id.detailContainer, detail)//和上面不能是同一个fragment，一个fragment只能加载一个fragment
+                .commit();
+        //接口回调
+        detail.setOnTitleClickListener(this);
 
 
+    }
 
-   * 动态加载：java文件   
+//4 并实现方法
+    @Override
+    public void onClick(String title) {
+        setTitle(title);
+    }
 
-
-
+```
