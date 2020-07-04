@@ -7,6 +7,7 @@
  * #### [Menu](#6)
  * #### [Dialog](#7)
  * #### [Fragment](#8)
+ * #### [ViewPager](#9)
 ## <span id = "1">快捷键</span>
 alt+enter：错误纠正
 ## <span id = "2">第一章</span>
@@ -1026,4 +1027,454 @@ android:layout_height="100dp"/>
         setTitle(title);
     }
 
+```
+
+###  <span id = "9"> ViewPager</span>
+1. 应用：引导界面、相册多图片预览；多Tab页面；广告播放展示（左滑右滑）
+2. support包：compile引用
+3. List<View> :上下滑动页面  PageAdapter:左右滑动切换页面
+4. 功能实现
+* 实现引导页和下滑点
+```java
+public class ImageViewPagerAdapter extends AppCompatActivity {
+
+    public static final int INIT_POSITION = 1;
+    private ViewPager mViewPager;
+
+    //2. 创建三个页面用作切换用
+    private int[] mLayoutIDs = {
+            R.layout.view_first,
+            R.layout.view_second,
+            R.layout.view_thrid
+    };
+    private List<View> mViews;
+
+    ////7 添加显示页面的布局（下面三个点，页面改变时点会随着改变）
+    //7.1 定义变量
+    private ViewGroup mDotViewGroup;
+    private List<ImageView> mDotViews = new ArrayList<>();
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_image_view_adapter);
+
+        //1. 获取当前页面
+        mViewPager = (ViewPager) findViewById(R.id.view_pager);
+        //4.6 获取点布局
+        mDotViewGroup = (ViewGroup) findViewById(R.id.dot_layout);
+
+        // 3. 初始化数据。将界面加到list（view）中
+        mViews = new ArrayList<>();
+        for (int index = 0; index < mLayoutIDs.length; index++) {
+            //4.1 图片加到view中，下面将mview装入adapter中
+            ImageView imageView = new ImageView(this);
+            imageView.setImageResource(R.mipmap.ic_launcher);
+            //4. 将页面layout加到view中，下面将view装入adapter中
+            //普通添加页面
+            //final View view  = getLayoutInflater().inflate(mLayoutIDs[index],null);
+            //mViews.add(view);
+            //4.2 放入mview
+            mViews.add(imageView);
+
+            //7.2 设置点的图片样式
+            ImageView dot = new ImageView(this);
+            dot.setImageResource(R.mipmap.ic_launcher);
+            dot.setMaxWidth(100);
+            dot.setMaxHeight(100);
+
+            //7.3 设置点布局
+            LinearLayout.LayoutParams layoutParams = new LinearLayout.LayoutParams(80,80);
+            layoutParams.leftMargin = 20;
+            dot.setLayoutParams(layoutParams);
+            dot.setEnabled(false);
+
+            //7.4 将点添加到视图组和视图中
+            mDotViewGroup.addView(dot);
+            mDotViews.add(dot);
+
+        }
+
+        // 5. 设置adapter 需要填充数据——页面。其中adapter获取前面mview的数据
+        mViewPager.setAdapter(mPagerAdapter);
+        //4.3 滑动当前，左右两个都保存。
+        mViewPager.setOffscreenPageLimit(4);
+        //7.6 设置初始界面状态和位置
+        mViewPager.setCurrentItem(INIT_POSITION);
+        setDotViews(INIT_POSITION);
+
+        //4.9 页面改变的设置
+        mViewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+            @Override
+            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+
+            }
+
+            @Override
+            public void onPageSelected(int position) {
+
+                setDotViews(position);
+            }
+
+            @Override
+            public void onPageScrollStateChanged(int state) {
+
+            }
+        });
+    }
+
+    //7.5 设置，随着页面的改变，点的样式发生改变
+    private void setDotViews(int position) {
+        for (int index = 0; index < mDotViews.size(); index++) {
+            mDotViews.get(index).setImageResource(position == index ? R.mipmap.diglett : R.mipmap.ic_launcher);
+
+        }
+    }
+
+
+    //6. 创建mPagerAdapter对象，重写方法
+    PagerAdapter mPagerAdapter = new PagerAdapter() {
+
+        @Override
+        //页数
+        public int getCount() {
+            return mLayoutIDs.length;
+        }
+
+        @Override
+        public boolean isViewFromObject(View view, Object object) {
+
+            return view == object;
+        }
+
+        @Override
+        //将视图添加进去
+        public Object instantiateItem(ViewGroup container, int position) {
+            View child = mViews.get(position);
+            container.addView(child);
+            return child;
+        }
+
+        @Override
+        //释放视图
+        public void destroyItem(ViewGroup container, int position, Object object) {
+            container.removeView(mViews.get(position));
+        }
+    };
+}
+```
+```java
+    //新建viewpager控件需要引包
+    <android.support.v4.view.ViewPager
+        android:id="@+id/view_pager"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        />
+
+    //4.4 添加显示页面的布局
+    <LinearLayout
+        android:id="@+id/dot_layout"
+        android:layout_width="120dp"
+        android:layout_height="30dp"
+        android:gravity="center"
+        android:layout_alignParentBottom="true"
+        android:layout_centerHorizontal="true"
+        android:layout_marginBottom="30dp"
+        android:orientation="horizontal">
+
+    </LinearLayout>
+```
+
+* Fragment+viewpager(每一页不使用视图，使用fragment)
+```java
+TestFragment.java:
+public class TestFragment extends Fragment {
+
+
+    public static final String TITLE = "title";
+    private String mTitle;
+
+    //3 设置TestFragment 可以设置位置或者title，类型要改变
+    public static TestFragment newInstance(String title) {
+        TestFragment fragment = new TestFragment();
+        Bundle bundle = new Bundle();
+        bundle.putString(TITLE, title);
+        fragment.setArguments(bundle);
+        return fragment;
+    }
+
+
+    @Override
+    public void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        //4 设置接收参数
+        if (getArguments() != null) {
+            mTitle = getArguments().getString(TITLE);
+        }
+    }
+
+    @Nullable
+    @Override
+    // 1.创建Fragment并建立视图接收返回
+    public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        View view = inflater.inflate(R.layout.fragment_test, null);
+        // 5. 传入参数
+        TextView textView = (TextView) view.findViewById(R.id.text_view);
+
+        textView.setText(mTitle);
+
+        return view;
+
+    }
+
+```
+```java
+TabViewpagerActivity.java:
+//11.2.2 实现TabHost接口
+public class TabViewPagerActivity extends AppCompatActivity implements TabHost.TabContentFactory{
+
+
+    private TabHost mTabHost;
+
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_tab_viewpager);
+
+        //9 设置底部导航栏布局
+        // 10 初始化总布局
+        mTabHost = (TabHost) findViewById(R.id.tab_host);
+        mTabHost.setup();
+
+        // 11 三个Tab 做处理
+
+        // 11.1. 初始化数据（要抽象到string中）
+        int[] titleIDs = {
+                R.string.home,
+                R.string.message,
+                R.string.me
+        };
+        int[] drawableIDs = {
+                R.drawable.main_tab_icon_home,
+                R.drawable.main_tab_icon_message,
+                R.drawable.main_tab_icon_me
+        };
+        // 11.2 数据填充到布局中 data < -- > view
+        for (int index = 0; index < titleIDs.length; index++) {
+
+            //提取视图为view
+            View view = getLayoutInflater().inflate(R.layout.main_tab_layout, null, false);
+            //提取对象
+            ImageView icon = (ImageView) view.findViewById(R.id.main_tab_icon);
+            TextView title = (TextView) view.findViewById(R.id.main_tab_txt);
+            View tab = view.findViewById(R.id.tab_bg);
+            //设置
+            icon.setImageResource(drawableIDs[index]);
+            title.setText(getString(titleIDs[index]));
+            tab.setBackgroundColor(getResources().getColor(R.color.white));
+            //将tab加入到view中
+            mTabHost.addTab(
+                    mTabHost.newTabSpec(getString(titleIDs[index]))
+                    .setIndicator(view)
+                    .setContent(this) //11.2.1 当前视图的内容
+            );
+
+        }
+
+
+        // 8. 三个fragment组成的viewpager，是底部导航栏的样式
+        final Fragment[] fragments = new Fragment[]{
+                TestFragment.newInstance("home"),
+                TestFragment.newInstance("message"),
+                TestFragment.newInstance("me")
+        };
+        //2. 创建vierpager
+        final ViewPager viewPager = (ViewPager) findViewById(R.id.view_pager);
+        viewPager.setOffscreenPageLimit(fragments.length);
+        //3. 设置adapter
+        viewPager.setAdapter(new FragmentPagerAdapter(getSupportFragmentManager()) {
+            @Override
+            public Fragment getItem(int position) {
+                // 6. 传入要设置的参数
+                // 传入pisition到TestFragment——setArguments——getArguments()，得到参数——进入oncreate进行设置
+                return fragments[position];
+            }
+
+            @Override
+            public int getCount() {
+
+                return fragments.length;
+            }
+        });
+
+        // 12 滑动时选择不同的tab
+        viewPager.addOnPageChangeListener(new ViewPager.OnPageChangeListener() {
+            @Override
+            public void onPageScrolled(int position, float positionOffset, int positionOffsetPixels) {
+
+            }
+
+            @Override
+            public void onPageSelected(int position) {
+                  if(mTabHost != null){
+                      mTabHost.setCurrentTab(position);
+                  }
+            }
+
+            @Override
+            public void onPageScrollStateChanged(int state) {
+
+            }
+        });
+
+        // 13 tab切换时候页面也改变
+        mTabHost.setOnTabChangedListener(new TabHost.OnTabChangeListener() {
+            @Override
+            public void onTabChanged(String s) {
+                if (mTabHost != null) {
+                    int position = mTabHost.getCurrentTab();
+                    viewPager.setCurrentItem(position);
+                }
+
+            }
+        });
+
+
+
+    }
+
+    //11.2.3 设置view，因为已经有了viewpager所以不需要再使用
+    @Override
+    public View createTabContent(String s) {
+        View view = new View(this);
+        view.setMinimumHeight(0);
+        view.setMinimumWidth(0);
+        return view;
+    }
+```
+```java
+fragment.xml:
+<RelativeLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+
+    <TextView
+        android:id="@+id/text_view"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:textSize="36sp"
+        android:layout_centerInParent="true"
+        android:text="@string/app_name"
+        android:gravity="center"/>
+</RelativeLayout>
+```
+```java
+  // 7. 设置底部导航栏 Tabhost-TabWidget-FrameLayout-view(画线）
+<TabHost
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/tab_host"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#f8f8f8"
+    android:orientation="vertical">
+
+      <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <android.support.v4.view.ViewPager
+            android:id="@+id/view_pager"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_above="@+id/tab_divider"
+            />
+
+        <FrameLayout
+            android:id="@android:id/tabcontent"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone"
+            android:layout_above="@+id/tab_divider"
+            >
+
+        </FrameLayout>
+
+        <View
+            android:id="@+id/tab_divider"
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:layout_above="@android:id/tabs"
+            android:background="#dfdfdf"
+            />
+
+        <TabWidget
+            android:id="@android:id/tabs"
+            android:layout_width="match_parent"
+            android:layout_height="60dp"
+            android:layout_alignParentBottom="true"
+            android:showDividers="none"
+            >
+
+        </TabWidget>
+
+    </RelativeLayout>
+
+
+</TabHost>
+
+```
+```java
+main_tab_layout.xml:
+ // 9. 设置底部导航栏样式 一个图标是一个layout
+    <LinearLayout
+        android:id="@+id/main_content"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center"
+        android:layout_centerInParent="true"
+        android:orientation="vertical">
+
+        <ImageView
+            android:id="@+id/main_tab_icon"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_marginTop="4dp"
+            android:scaleType="centerInside"
+            android:src="@drawable/main_tab_icon_home"/>
+
+        <TextView
+            android:id="@+id/main_tab_txt"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="5dp"
+            // 9.1 设置选中时图标颜色的变化
+            android:textColor="@color/color_main_tab_txt"
+            android:text="@string/home"/>
+    </LinearLayout>
+
+    <ImageView
+        android:visibility="gone"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"/>
+
+```
+```java
+新建color文件：color_main_tab_text.xml:
+    // 9.1 设置选中时文本颜色的变化
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="#cccccc"/>
+    <item android:state_selected="true" android:color="#4dd0c8"/>
+    <item android:state_pressed="true" android:color="#4dd0c8"/>
+</selector>
+```
+```java
+drawable文件图片切换，三个文件，6种样式
+main_tab_icon_home.xml:
+//9.2 设置所有图片的变化前后效果。顺序是按照语句顺序的。希望状态切换样式改变，那么需要将状态变化设置放在前面
+    <item android:state_pressed="true"  android:drawable="@drawable/tabbar_home_pressed" />
+    <item android:state_selected="true" android:drawable="@drawable/tabbar_home_pressed" />
+    <item android:drawable="@drawable/tabbar_home" />
 ```
