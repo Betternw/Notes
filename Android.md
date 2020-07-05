@@ -1502,10 +1502,11 @@ main_tab_icon_home.xml:
       * 比如：http://example.com?data=3e
       ```java
         // 2. 在manifext.xml文件中申请网络权限
-     <uses-permission android:name="android.permission.INTERNET"/> //允许程序打开网络套接字
-    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/> //允许程序访问网络连接信息
+        <uses-permission android:name="android.permission.INTERNET"/> //允许程序打开网络套接字
+        <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/> //允许程序访问网络连接信息
       ```
-```java
+
+      ```java
         public void onClick(View v) {
         switch (v.getId()) {
 
@@ -1747,16 +1748,16 @@ main_tab_icon_home.xml:
       * 在res文件下创建xml/network_security_config文件
       * 增加cleartextTrafficPermitted属性
     ```java
-<network-security-config>
-<base-config cleartextTrafficPermitted = "true"/> // 允许http请求的加载
-</network-security-config>
+        <network-security-config>
+        <base-config cleartextTrafficPermitted = "true"/> // 允许http请求的加载
+        </network-security-config>
     ```    
    * 添加安全配置文件
       * manifast.xml中的Application申明  
-      ```java
+    ```java
     <application
     <action android:name="android.intent.action.MAIN"/>
     <category android:name="android.intent.category.LAUNCHER"/>       
     </application>               
-      ```
+    ```
  
