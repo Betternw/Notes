@@ -8,6 +8,8 @@
  * #### [Dialog](#7)
  * #### [Fragment](#8)
  * #### [ViewPager](#9)
+### * [网络操作](#10)
+ * #### [网络操作](#11)
 ## <span id = "1">快捷键</span>
 alt+enter：错误纠正
 ## <span id = "2">第一章</span>
@@ -1478,3 +1480,26 @@ main_tab_icon_home.xml:
     <item android:state_selected="true" android:drawable="@drawable/tabbar_home_pressed" />
     <item android:drawable="@drawable/tabbar_home" />
 ```
+## <span id = "10">网络操作</span>
+###  <span id = "11"> 网络操作</span>
+1. 基础知识
+* 服务端为客户端提供数据。
+* 协议
+   * HTTP：应用层。输入网址——DNS找到ip地址——通过HTTP请求转发到web服务器——从数据库中得到数据——转发回服务器——将HTTP解析的html文档等传输回web服务器，转发回客户端。
+   * TCP：传输层。客户端和服务器端进行联系（三次握手）
+   * URL：协议+主机域名+顶级域名+路径（虚拟目录）+文件名字+？+xxx&xxx&xxx（参数，通过参数返回不同的内容）
+* 网络请求
+   * 从服务器获取数据
+      * 实例化URL对象
+      * 获取HttpURLConnection对象
+      * 设置请求连接属性
+      * 获取相应码，判断连接结果码
+      * 读取输入流并解析
+   * get请求
+      * 从server获取数据
+      * 将参数放在问号后面
+      * http://example.com?data=3e
+   * post请求
+      * 提交数据
+      * http://example.com? 用数据封装起来，再传给server
+       
