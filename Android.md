@@ -1498,8 +1498,129 @@ main_tab_icon_home.xml:
    * get请求
       * 从server获取数据
       * 将参数放在问号后面
-      * http://example.com?data=3e
+      * 比如：http://example.com?data=3e
+      ```java
+        public void onClick(View v) {
+        switch (v.getId()) {
+
+            case R.id.getButton:
+                // 1. 建立线程。主线程全部用来跑网络连接会超时崩溃
+                // 2. 在manifext.xml文件中申请网络权限
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        String urlString = "http://www.imooc.com/api/teacher?type=2&page=1";
+                        // 3. 构建url对象 获取数据
+                        mResult = requestDataByGet(urlString);
+                        // 4 请求网络在子线程，更新ui在主线程。子更改主线程UI方法：（handler消息机制）
+                        runOnUiThread(new Runnable() {
+                            @Override
+                            public void run() {
+                                // 4.1 转为utf-8格式
+                                mResult = decode(mResult);
+                                // 4.2 设置文本框内显示数据
+                                mTextView.setText(mResult);
+                            }
+                        });
+                    }
+                }).start();
+                break;
+               // 3. 构建url对象 获取数据
+        private String requestDataByGet(String urlString) {
+            String result = null;
+            try {
+                URL url = new URL(urlString);
+                //打开connection连接
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                //超时时间 默认毫秒
+                connection.setConnectTimeout(30000);
+                //请求的方法类型
+                connection.setRequestMethod("GET");  // GET POST
+                //请求属性 参数1：数据类型 参数2：json————设置拿到的数据类型是json格式的
+                connection.setRequestProperty("Content-Type", "application/json");
+                //设置数据集的格式格式
+                connection.setRequestProperty("Charset", "UTF-8");
+                //设置接收的数据集格式
+                connection.setRequestProperty("Accept-Charset", "UTF-8");
+                //发起连接
+                connection.connect();
+                //获取请求码  知道连接状态
+                int responseCode = connection.getResponseCode();
+                if (responseCode == HttpURLConnection.HTTP_OK) {
+                    //输入流数据
+                    InputStream inputStream = connection.getInputStream();
+                    // 3.1 将输入流转换为字符串
+                    result = streamToString(inputStream);
+                } else {
+                    //请求消息
+                    String responseMessage = connection.getResponseMessage();
+                    Log.e(TAG, "requestDataByPost: " + responseMessage);
+                }
+            } catch (MalformedURLException e) {
+                e.printStackTrace();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return result;
+        }
+
+        /**
+        * 将输入流转换成字符串
+        *
+        * @param is 从网络获取的输入流
+        * @return 字符串
+        */
+        //3.1 将输入流转换为字符串
+        public String streamToString(InputStream is) {
+            try {
+                //管道
+                ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                byte[] buffer = new byte[1024];
+                int len;
+                while ((len = is.read(buffer)) != -1) {
+                    baos.write(buffer, 0, len);
+                }
+                baos.close();
+                is.close();
+                byte[] byteArray = baos.toByteArray();
+                return new String(byteArray);
+            } catch (Exception e) {
+                Log.e(TAG, e.toString());
+                return null;
+            }
+        }
+        // 4.1 转为utf-8格式
+        public static String decode(String unicodeStr) {
+            if (unicodeStr == null) {
+                return null;
+            }
+            StringBuilder retBuf = new StringBuilder();
+            int maxLoop = unicodeStr.length();
+            for (int i = 0; i < maxLoop; i++) {
+                if (unicodeStr.charAt(i) == '\\') {
+                    if ((i < maxLoop - 5)
+                            && ((unicodeStr.charAt(i + 1) == 'u') || (unicodeStr
+                            .charAt(i + 1) == 'U')))
+                        try {
+                            retBuf.append((char) Integer.parseInt(unicodeStr.substring(i + 2, i + 6), 16));
+                            i += 5;
+                        } catch (NumberFormatException localNumberFormatException) {
+                            retBuf.append(unicodeStr.charAt(i));
+                        }
+                    else {
+                        retBuf.append(unicodeStr.charAt(i));
+                    }
+                } else {
+                    retBuf.append(unicodeStr.charAt(i));
+                }
+            }
+            return retBuf.toString();
+        }
+                         
+      ```
    * post请求
       * 提交数据
-      * http://example.com? 用数据封装起来，再传给server
+      * 比如：http://example.com? 用数据封装起来，再传给server
+      ```java
+      ```
        
