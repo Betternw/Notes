@@ -1488,6 +1488,7 @@ main_tab_icon_home.xml:
    * HTTP：应用层。输入网址——DNS找到ip地址——通过HTTP请求转发到web服务器——从数据库中得到数据——转发回服务器——将HTTP解析的html文档等传输回web服务器，转发回客户端。
    * TCP：传输层。客户端和服务器端进行联系（三次握手）
    * URL：协议+主机域名+顶级域名+路径（虚拟目录）+文件名字+？+xxx&xxx&xxx（参数，通过参数返回不同的内容）
+   * Http提供了封装或者显示数据的具体形式，Socket提供了网络通信的能力
 * 网络请求
    * 从服务器获取数据
       * 实例化URL对象
@@ -1500,6 +1501,11 @@ main_tab_icon_home.xml:
       * 将参数放在问号后面
       * 比如：http://example.com?data=3e
       ```java
+        // 2. 在manifext.xml文件中申请网络权限
+     <uses-permission android:name="android.permission.INTERNET"/> //允许程序打开网络套接字
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE"/> //允许程序访问网络连接信息
+      ```
+```java
         public void onClick(View v) {
         switch (v.getId()) {
 
@@ -1621,6 +1627,136 @@ main_tab_icon_home.xml:
    * post请求
       * 提交数据
       * 比如：http://example.com? 用数据封装起来，再传给server
+      * 设置post并解析数据（将json映射为对象）
+        ```java
+            // 5 设置post数据方法
+        private String requestDataByPost(String urlString) {
+        String result = null;
+        try {
+            URL url = new URL(urlString);
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setConnectTimeout(30000);
+            connection.setRequestMethod("POST");
+
+            // 设置运行输入,输出:
+            connection.setDoOutput(true);
+            connection.setDoInput(true);
+            // Post方式不能缓存,需手动设置为false
+            connection.setUseCaches(false);
+            connection.connect(); //发起连接
+
+            // 请求的数据打包:
+            String data = "username=" + URLEncoder.encode("imooc", "UTF-8")
+                    + "&number=" + URLEncoder.encode("15088886666", "UTF-8");
+            // 获取输出流
+            OutputStream out = connection.getOutputStream();
+            //将封装好的数据提交
+            out.write(data.getBytes());
+            out.flush();
+            out.close();
+
+            int responseCode = connection.getResponseCode();
+            if (responseCode == HttpURLConnection.HTTP_OK) {
+                InputStream inputStream = connection.getInputStream();
+                Reader reader = new InputStreamReader(inputStream, "UTF-8");
+                char[] buffer = new char[1024];
+                reader.read(buffer);
+                result = new String(buffer);
+                reader.close();
+            } else {
+                String responseMessage = connection.getResponseMessage();
+                Log.e(TAG, "requestDataByPost: " + responseMessage);
+            }
+
+            final String finalResult = result;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    mTextView.setText(finalResult);
+                }
+            });
+
+            connection.disconnect();
+            return result;
+        } catch (MalformedURLException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return null;
+        }
+        ```
+        ```java
+            case R.id.parseDataButton:
+        // 6. 处理json数据，将数据映射为对象
+        if (!TextUtils.isEmpty(mResult)) {
+            handleJSONData(mResult);
+        }
+        break;
+        
+
+        // 6. 处理json数据，将数据映射为对象
+        private void handleJSONData(String json) {
+            try {
+                //6.1 一个大括号是一个对象
+                JSONObject jsonObject = new JSONObject(json);
+                // 6.1.1 读status
+                int status = jsonObject.getInt("status");
+                //6.1.2 读数组
+                JSONArray lessons = jsonObject.getJSONArray("data");
+                // 6.2 新建对象和列表  用于存放拿出的数据
+                LessonResult lessonResult = new LessonResult();
+                List<LessonResult.Lesson> lessonList = new ArrayList<>();
+                //循环放数据
+                if (lessons != null && lessons.length() > 0) {
+                    for (int index = 0; index < lessons.length(); index++) {
+                        //6.1.3 拿出数组中每一项数据
+                        JSONObject item = (JSONObject) lessons.get(0);
+                        int id = item.getInt("id");
+                        String name = item.getString("name");
+                        String smallPic = item.getString("picSmall");
+                        String bigPic = item.getString("picBig");
+                        String description = item.getString("description");
+                        int learner = item.getInt("learner");
+                        //6.2.1 每拿出一个数据，就放到对象中
+                        LessonResult.Lesson lesson = new LessonResult.Lesson();
+                        lesson.setID(id);
+                        lesson.setName(name);
+                        lesson.setSmallPictureUrl(smallPic);
+                        lesson.setBigPictureUrl(bigPic);
+                        lesson.setDescription(description);
+                        lesson.setLearnerNumber(learner);
+                        lessonList.add(lesson);
+                    }
+                    //6.2.2 将数组和状态放入对象中
+                    lessonResult.setStatus(status);
+                    lessonResult.setLessons(lessonList);
+                    // 6.2.3 设置显示
+                    mTextView.setText("data is : " + lessonResult.toString());
+                }
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+        }
+
+        ```
+      
+* 9.0 新特性  
+   * 创建安全配置文件 
+      * 在res文件下创建xml/network_security_config文件
+      * 增加cleartextTrafficPermitted属性
+    ```java
+<network-security-config>
+<base-config cleartextTrafficPermitted = "true"/> // 允许http请求的加载
+</network-security-config>
+    ```    
+   * 添加安全配置文件
+      * manifast.xml中的Application申明  
       ```java
+    <application
+    <action android:name="android.intent.action.MAIN"/>
+    <category android:name="android.intent.category.LAUNCHER"/>       
+    </application>               
       ```
-       
+ 
