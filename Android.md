@@ -2222,8 +2222,18 @@ main_tab_icon_home.xml:
    * 实质：Handler异步消息处理机制
    * 参数都是泛型
    * 常用方法
-   执行前——onPreExecute()  主线程
-   执行中—— doInBackground 另一个线程，抛出进度
-   执行后——onPostExecute 主线程
-   处理进度——onProgressUpdate 主线程
+      * 执行前——onPreExecute()  主线程
+      * 执行中—— doInBackground 另一个线程，抛出进度
+      * 执行后——onPostExecute 主线程
+      * 处理进度——onProgressUpdate 主线程
 4. 实现下载功能
+   * 网络上请求数据：申请网络权限 读写存储权限
+   ```java
+       <uses-permission android:name="android.permission.INTERNET"/>
+       <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+       <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+   ```
+   * 布局layout
+   * 下载之前：UI
+   * 下载中：数据
+   * 下载后：UI
