@@ -10,6 +10,7 @@
  * #### [ViewPager](#9)
 ### * [网络操作](#10)
  * #### [网络操作](#11)
+ * #### [Handler通信](#12)
 ## <span id = "1">快捷键</span>
 alt+enter：错误纠正
 ## <span id = "2">第一章</span>
@@ -1760,4 +1761,449 @@ main_tab_icon_home.xml:
     <category android:name="android.intent.category.LAUNCHER"/>       
     </application>               
     ```
- 
+###  <span id = "12"> Handler通信</span>
+1. 关于线程
+   * 主线程=UI线程
+   * new Thread创建子线程
+   * 子线程不能更新UI线程的东西，需要使用Handler
+   * 消息循环机制：进入主线程后开始循环，处理事件
+2. Handler作用
+   * 定时任务
+   * 在不同的线程之间执行动作
+   * MessageQueue是消息队列，存储message和runnable，在线程里，Looper将Message从队列中取出，抽给handler，其中的handlerMessage方法对消息进行处理；或者Looper将runable从队列中取出，直接run。
+3. Handler使用
+   * 基本实现和消息发送
+   创建handler——创建子线程，子线程中handler中做更改内容——通过handler将更改的message发送给主线程——主线程handler接收消息并处理
+   ```java
+      protected void onCreate(Bundle savedInstanceState) {
+        /**
+         * UI线程
+         */
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        final TextView textView = (TextView)findViewById(R.id.tv);
+
+        //1. 创建Handler
+        final Handler handler = new Handler(){
+            @Override
+            //3. 处理消息
+            public void handleMessage(Message msg) {
+                super.handleMessage(msg);
+                /**
+                 * 主线程接到子线程发出来的消息，处理
+                 */
+                //3.1 接收子线程更改消息并处理消息
+                Log.d(TAG,"handleMessage:"+msg.what);
+                if (msg.what == 1002){
+                    textView.setText("imooc");
+                    // Log.d(TAG,"handleMessage:"+msg.arg1); // 传入的参数是打包类型
+
+                }
+
+            }
+        };
+
+        // 2. button代表子线程运行
+        findViewById(R.id.button).setOnClickListener(new View.OnClickListener(){
+            @Override
+            public void onClick(View v) {
+                /**
+                 * 子线程
+                 */
+                //全部在主线程中运行有可能做大量耗时操作
+                // 2.1 创建子线程
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        try {
+                            Thread.sleep(2000);
+                        }catch (InterruptedException e){
+                            e.printStackTrace();
+                        }
+
+                        /**
+                         * 通知UI更新
+                         */
+                        // 2.2. 子线程发送消息 参数：消息内容
+                        handler.sendEmptyMessage(1001);
+                        // 2.2.1 参数是消息对象
+                        Message message = Message.obtain();
+                        message.what = 1002;
+                        message.arg1 = 1003;
+                        message.arg2 = 1004;
+                        message.obj = MainActivity.this;
+                        handler.sendMessage(message);
+
+                        /**
+                         * 定时任务
+                         */
+                        // 2.2.2 消息发送时间——在某事发生后的几秒之后，相对时间
+                        handler.sendMessageAtTime(message, SystemClock.uptimeMillis()+3000);
+                        // 在两秒之后——绝对时间
+                        handler.sendMessageDelayed(message,2000);
+
+                        final Runnable runnable = new Runnable() {
+
+                            @Override
+                            public void run() {
+                                int a = 1+2+3;
+                            }
+                        };
+                        //2.3 参数是可执行对象 直接运行
+                        handler.post(runnable);
+                        runnable.run();
+                        //2.3.1 定时任务
+                        handler.postDelayed(runnable,2000);
+
+                    }
+                }).start();
+
+
+            }
+        });
+
+        //不创建子线程直接发送消息
+        handler.sendEmptyMessage(1001);
+
+
+    }
+   ```
+   * 异步下载文件更新进度条
+   ```java
+   public class DownloadActivity extends Activity {
+
+    private Handler mHandler;
+    public static final int DOWNLOAD_MESSAGE_CODE = 100001;
+    public static final int DOWNLOAD_MESSAGE_FAIL_CODE = 100002;
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_download);
+
+        final ProgressBar progressBar = (ProgressBar)findViewById(R.id.progressBar);
+
+        /**
+         * 主线程 -->start
+         * 点击按钮 |
+         * 发起下载 |
+         * 开启子线程做下载 |
+         * 下载完成后通知主线程 | -->主线程更新进度条
+         */
+        findViewById(R.id.button2).setOnClickListener(new View.OnClickListener() {
+            @Override
+            // 1. 点击按钮发起事件，并创建子线程
+            public void onClick(View v) {
+                new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        // 2.发起下载
+                        download("http://download.sj.qq.com/upload/connAssitantDownload/upload/MobileAssistant_1.apk");
+                    }
+                }).start();
+
+            }
+        });
+
+        // 2.6 创建handler并发送消息
+        mHandler =  new Handler(){
+            @Override
+            public void handleMessage(Message msg) {
+                super.handleMessage(msg);
+
+                switch (msg.what){
+                    case DOWNLOAD_MESSAGE_CODE:
+                        if(msg.obj!=null)
+                            //进度条进度设置
+                        progressBar.setProgress((Integer) msg.obj);
+                        break;
+                    case DOWNLOAD_MESSAGE_FAIL_CODE:
+
+
+                }
+            }
+        };
+    }
+
+    // 2.发起下载
+    //3. 设置下载权限和读写文件权限 在manifest中
+        private void download(String appUrl){
+            try {
+                URL url = new URL(appUrl);
+                //2.1 开启连接
+                URLConnection urlConnection = url.openConnection();
+                //2.2 获得文件流
+                InputStream inputStream = urlConnection.getInputStream();
+                /**
+                 * 获取文件的总长度
+                 */
+                int contentLength = urlConnection.getContentLength();
+                //获取下载内容的存储地址  File.separator表示斜杠  放在imooc目录下
+                String downloadFolderName = Environment.getExternalStorageDirectory()
+                        + File.separator+"imooc"+File.separator;
+                //2.3 创建文件
+                File file = new File(downloadFolderName);
+                if (!file.exists()){
+                    file.mkdir();
+                }
+                String fileName = downloadFolderName + "imooc.apk";
+                File apkFile = new File(fileName);
+                if (apkFile.exists()){
+                    apkFile.delete();
+                }
+                //下载进度
+                int downloadSize = 0;
+                byte[] bytes = new  byte[1024];
+
+                int length = 0;
+                //2.4 输入流读出数据，输出流将数据写入文件
+                // 读出进度
+                OutputStream outputStream = new FileOutputStream(fileName);
+                while ((length = inputStream.read(bytes)) != -1){
+                    outputStream.write(bytes,0,length);
+                    downloadSize += length;
+                    /**
+                     * update UI
+                     */
+                    // 2.5 通过message发送更改内容，handler发送给主线程
+                    Message message = Message.obtain();
+                    message.obj = downloadSize * 100 / contentLength;
+                    message.what = DOWNLOAD_MESSAGE_CODE;
+                    // 2.6 创建handler并发送消息
+                    mHandler .sendMessage(message);
+                }
+                //2.7 关闭流
+                inputStream.close();
+                outputStream.close();
+            }catch (MalformedURLException e){
+                //2.8 下载失败消息
+                notifyDownloadFaild();
+                e.printStackTrace();
+            }catch (IOException e){
+                notifyDownloadFaild();
+                e.printStackTrace();
+            }
+    }
+
+    //3. 设置下载权限和写文件权限
+    private  void  notifyDownloadFaild(){
+        Message message = Message.obtain();
+        message.what = DOWNLOAD_MESSAGE_FAIL_CODE;
+        mHandler .sendMessage(message);
+    }
+   ```
+   ```java
+       //3. 设置下载权限和读写文件权限
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+   ```
+   * 实现倒计时并优化内存泄露
+   ```java
+   public class MainActivity extends AppCompatActivity {
+    /**
+     * 倒计时标记handle code
+     */
+    public  static  final  int COUNTDOWN_TIME_CODE = 100001;
+    /**
+     * 倒计时间隔
+     */
+    public  static  final  int  DELAY_MILLIS = 1000;
+    /**
+     * 倒计时最大值
+     */
+    public  static  final  int  MAX_COUNT = 10;
+    private TextView mCountdownTimeTextView;
+
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        //1. 得到控件
+        mCountdownTimeTextView= (TextView)findViewById(R.id.countdownTimeTextView);
+
+        //2. 创建了一个handler,写成静态的handler
+        CountdownTimeHandler handler = new CountdownTimeHandler(this);
+
+        //3. 新建了一个message
+        Message message = Message.obtain();
+        message.what = COUNTDOWN_TIME_CODE;
+        message.arg1 = MAX_COUNT;
+
+        //3.1 第一次发送这个message 延迟发送消息
+        handler.sendMessageDelayed(message,DELAY_MILLIS);
+
+    }
+
+    //2.1
+    public  static  class  CountdownTimeHandler extends Handler{
+          static  final  int  MIN_COUNT = 0;
+          //2.2 建立弱引用
+        final WeakReference<MainActivity> mWeakReference;
+
+         CountdownTimeHandler(MainActivity activity){
+            mWeakReference = new WeakReference<> (activity );
+        }
+
+        @Override
+        // 2.2 接收信息并处理
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            //通过弱引用拿到activity
+            MainActivity activity =mWeakReference.get();
+
+            switch (msg.what){
+                case COUNTDOWN_TIME_CODE:
+                    int value = msg.arg1;
+                    //通过弱引用的activity拿到textview，并设置值
+                    activity.mCountdownTimeTextView.setText(String.valueOf(value --));
+
+                     //循环发的消息控制
+                    if (value >= MIN_COUNT) {
+                        //再建立一个message，将更改后的数字这一消息发出，从而实现循环的消息控制
+                        Message message = Message.obtain();
+                        message.what = COUNTDOWN_TIME_CODE;
+                        message.arg1 = value;
+                        sendMessageDelayed(message, DELAY_MILLIS);
+                    }
+
+                    break;
+            }
+        }
+    }
+
+   ```
+   * 打地鼠demo
+   ```java
+   public class DiglettActivity extends AppCompatActivity implements View.OnClickListener,View.OnTouchListener{
+
+    public  static final int CODE = 123;
+
+    private TextView mResultTextView;
+    private ImageView mDiglettImageView;
+    private  Button mStarrButton;
+
+    public int[][] mPosition = new  int[][]{
+            {342,180},{432,880},
+            {521,256},{429,780},
+            {456,976},{145,665},
+            {123,678},{564,567},
+    };
+
+    private  int mTotalCount;
+    private  int mSuccessCount;
+
+    public static final int MAX_COUNT = 10;
+
+    private DiglettHandler mHandler = new DiglettHandler(this);
+
+    @Override
+    public void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_diglett);
+
+        //1. 初始化控件
+        initView();
+
+        setTitle("打地鼠");
+
+    }
+    //1. 初始化控件
+    private void initView(){
+        mResultTextView = (TextView)findViewById(R.id.text_view);
+        mDiglettImageView = (ImageView)findViewById(R.id.image_view);
+        mStarrButton = (Button)findViewById(R.id.start_button);
+
+        mStarrButton.setOnClickListener(this);
+        mDiglettImageView.setOnTouchListener(this);
+    }
+
+    @Override
+    // 2. 设置点击事件
+    public void onClick(View v){
+        switch (v.getId()){
+            case  R.id.start_button:
+                start();
+                break;
+        }
+
+    }
+    //3. 设置提示
+    private  void  start(){
+        //发送消息 handler.sendmessagedelayer
+        mResultTextView.setText("开始啦");
+        mStarrButton.setText("游戏中.....");
+        mStarrButton.setEnabled(false);
+        next(0);
+    }
+
+    //5. 设置下一个的产生
+    private  void  next(int delayTime){
+        int position = new Random().nextInt(mPosition.length);
+
+        Message message = Message.obtain();
+        message.what =CODE;
+        message.arg1 = position;
+
+        //通过handler将下一个的消息发出
+        mHandler.sendMessageDelayed(message,delayTime);
+        mTotalCount ++;
+    }
+
+    @Override
+    //5. 设置点击
+    public boolean onTouch(View v, MotionEvent event) {
+        v.setVisibility(View.GONE);
+        mSuccessCount ++ ;
+        mResultTextView.setText("打到了"+ mSuccessCount +"只，共" + MAX_COUNT +"只.");
+        return false;
+    }
+
+    //4. 设置handler，接收到消息后进行位置更改
+    public static class DiglettHandler extends Handler{
+        public static final int RANDOM_NUBER = 500;
+        public  final WeakReference<DiglettActivity> mWeakReference;
+
+        public  DiglettHandler(DiglettActivity activity){
+            mWeakReference = new WeakReference<>(activity);
+
+        }
+
+        @Override
+        //接受到要产生下一个的消息，设置下一个的属性
+        public void handleMessage(Message msg) {
+            super.handleMessage(msg);
+            DiglettActivity activity = mWeakReference.get();
+
+            switch (msg.what){
+                case CODE:
+                    if (activity.mTotalCount >MAX_COUNT){
+                        activity.clear();
+                        Toast.makeText(activity,"地鼠打完了！",Toast.LENGTH_LONG).show();
+                        return;
+                    }
+
+                    int position = msg.arg1;
+                    activity.mDiglettImageView.setX(activity.mPosition[position][0]);
+                    activity.mDiglettImageView.setY(activity.mPosition[position][1]);
+                    activity.mDiglettImageView.setVisibility(View.VISIBLE);
+
+                    int randomTime = new Random().nextInt(RANDOM_NUBER) + RANDOM_NUBER;
+
+                    activity.next(randomTime);
+                    break;
+            }
+        }
+    }
+    // 4.1 设置清除
+    private  void clear(){
+        mTotalCount = 0;
+        mSuccessCount = 0;
+        mDiglettImageView.setVisibility(View.GONE);
+        mStarrButton.setText("点击开始");
+        mStarrButton.setEnabled(true);
+
+    }
+   ```
