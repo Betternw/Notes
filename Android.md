@@ -11,6 +11,7 @@
 ### * [网络操作](#10)
  * #### [网络操作](#11)
  * #### [Handler通信](#12)
+ * #### [AsyncTask异步任务](#13)
 ## <span id = "1">快捷键</span>
 alt+enter：错误纠正
 ## <span id = "2">第一章</span>
@@ -2161,7 +2162,7 @@ main_tab_icon_home.xml:
         return false;
     }
 
-    //4. 设置handler，接收到消息后进行位置更改
+    //4. 设置handler，接收到消息后进行位置更改，将更改信息通过handler传给下一个下一个位置值。
     public static class DiglettHandler extends Handler{
         public static final int RANDOM_NUBER = 500;
         public  final WeakReference<DiglettActivity> mWeakReference;
@@ -2207,3 +2208,22 @@ main_tab_icon_home.xml:
 
     }
    ```
+###  <span id = "13"> AsyncTask异步任务</span> 
+1. 同步任务：一步一步进行  异步任务：同时进行，互不干扰，多个线程
+2. 线程、多线程
+   * ANR（Application Not Responding）：应用程序无响应
+   * 耗时操作时使用多线程
+   * 多线程操作UI事件，其他线程处理后到主线程进行展示
+   * 线程具有安全问题
+   * 子线程更新主线程的东西使用handler，将要更改的信息传给主线程
+3. AsyncTask
+   * 目的：方便在后台线程操作后更新UI
+   * Thread和Handler进行封装
+   * 实质：Handler异步消息处理机制
+   * 参数都是泛型
+   * 常用方法
+   执行前——onPreExecute()  主线程
+   执行中—— doInBackground 另一个线程，抛出进度
+   执行后——onPostExecute 主线程
+   处理进度——onProgressUpdate 主线程
+4. 实现下载功能
