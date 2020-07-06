@@ -2237,3 +2237,388 @@ main_tab_icon_home.xml:
    * 下载之前：UI
    * 下载中：数据
    * 下载后：UI
+   ```java
+   public class MainActivity extends AppCompatActivity {
+
+    private static final String TAG = "MainActivity";
+    public static final int INIT_PROGRESS = 0;
+    public static final String APK_URL = "http://download.sj.qq.com/upload/connAssitantDownload/upload/MobileAssistant_1.apk";
+    public static final String FILE_NAME = "imooc.apk";
+    private ProgressBar mProgressBar;
+    private Button mDownloadButton;
+    private TextView mResultTextView;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        // 1. 初始化视图
+        initView();
+
+        // 2. 设置点击监听
+        setListener();
+
+        // 3. 初始化UI数据
+        setData();
+
+        /*DownloadHelper.download(APK_URL, "", new DownloadHelper.OnDownloadListener.SimpleDownloadListener() {
+            @Override
+            public void onSuccess(int code, File file) {
+
+            }
+
+            @Override
+            public void onFail(int code, File file, String message) {
+
+            }
+
+            @Override
+            public void onStart() {
+                super.onStart();
+            }
+
+            @Override
+            public void onProgress(int progress) {
+                super.onProgress(progress);
+            }
+        });*/
+
+
+    }
+
+    /**
+     * 初始化视图
+     */
+    //1. 初始化视图
+    private void initView() {
+
+        mProgressBar = (ProgressBar) findViewById(R.id.progressBar);
+        mDownloadButton = (Button) findViewById(R.id.button);
+        mResultTextView = (TextView) findViewById(R.id.textView);
+
+    }
+
+    //2. 设置点击监听
+    private void setListener() {
+
+        mDownloadButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                // TODO: 16/12/19 下载任务
+                //5.1 传参
+                DownloadAsyncTask asyncTask = new DownloadAsyncTask();
+                asyncTask.execute(APK_URL);
+            }
+        });
+    }
+
+    // 3.初始化数据
+    private void setData() {
+
+        mResultTextView.setText(R.string.download_text);
+        mDownloadButton.setText(R.string.click_download);
+        mProgressBar.setProgress(INIT_PROGRESS);
+
+    }
+
+
+    /**
+     * String 入参
+     * Integer 进度
+     * Boolean 返回值
+     */
+    public class DownloadAsyncTask extends AsyncTask<String, Integer, Boolean> {
+        String mFilePath;
+        /**
+         * 在异步任务之前，在主线程中
+         */
+        @Override
+        // 4 下载前操作
+        protected void onPreExecute() {
+            super.onPreExecute();
+            // 可操作UI  类似淘米,之前的准备工作
+            mDownloadButton.setText(R.string.downloading);
+            mResultTextView.setText(R.string.downloading);
+            mProgressBar.setProgress(INIT_PROGRESS);
+        }
+
+        /**
+         * 在另外一个线程中处理事件
+         *
+         * @param params 入参  煮米
+         * @return 结果
+         */
+        @Override
+        // 5.下载中 另外一个线程处理
+        // 5.1 传参
+        protected Boolean doInBackground(String... params) {
+            if(params != null && params.length > 0){
+                String apkUrl = params[0];
+
+                try {
+                    // 构造URL
+                    URL url = new URL(apkUrl);
+                    // 构造连接，并打开
+                    URLConnection urlConnection = url.openConnection();
+                    InputStream inputStream = urlConnection.getInputStream();
+
+                    // 获取了下载内容的总长度
+                    int contentLength = urlConnection.getContentLength();
+
+                    // 下载地址准备
+                    mFilePath = Environment.getExternalStorageDirectory()
+                            + File.separator + FILE_NAME;
+
+                    // 对下载地址进行处理
+                    File apkFile = new File(mFilePath);
+                    if(apkFile.exists()){
+                        boolean result = apkFile.delete();
+                        if(!result){
+                            return false;
+                        }
+                    }
+
+                    // 已下载的大小
+                    int downloadSize = 0;
+
+                    // byte数组
+                    byte[] bytes = new byte[1024];
+
+                    int length;
+
+                    // 创建一个输入管道
+                    OutputStream outputStream = new FileOutputStream(mFilePath);
+
+                    // 不断的一车一车挖土,走到挖不到为止
+                    while ((length = inputStream.read(bytes)) != -1){
+                        // 挖到的放到我们的文件管道里
+                        outputStream.write(bytes, 0, length);
+                        // 累加我们的大小
+                        downloadSize += length;
+                        // 发送进度  每次下载都更新进度
+                        publishProgress(downloadSize * 100/contentLength);
+                    }
+
+                    inputStream.close();
+                    outputStream.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    return false;
+                }
+            } else {
+                return false;
+            }
+
+            return true;
+        }
+
+        // 6 下载后操作
+        @Override
+        protected void onPostExecute(Boolean result) {
+            super.onPostExecute(result);
+            // 也是在主线程中 ，执行结果 处理
+            mDownloadButton.setText(result? getString(R.string.download_finish) : getString(R.string.download_finish));
+            mResultTextView.setText(result? getString(R.string.download_finish) + mFilePath: getString(R.string.download_finish));
+
+        }
+
+        // 7 下载进度处理
+        @Override
+        protected void onProgressUpdate(Integer... values) {
+            super.onProgressUpdate(values);
+            // 收到进度，然后处理： 也是在UI线程中。
+            if (values != null && values.length > 0) {
+                mProgressBar.setProgress(values[0]);
+            }
+        }
+
+    }
+
+   ```
+5. 封装方法
+   * 创建调用类进行封装
+      * 回调：封装类中定义接口（要执行的方法）、定义下载方法、执行异步任务（参数为接口），然后执行类使用封装类的对象调用异步任务，参数有接口，重写接口允许的方法。
+      ```java
+        public class DownloadHelper {
+
+
+        // 执行异步任务 excute方法
+        public static void download(String url, String localPath, OnDownloadListener listener){
+            DownloadAsyncTask task = new DownloadAsyncTask(url, localPath, listener);
+            task.execute();
+        }
+
+
+        public static class DownloadAsyncTask extends AsyncTask<String, Integer, Boolean> {
+
+            String mUrl;
+            String mFilePath;
+            OnDownloadListener mListener;
+
+            public DownloadAsyncTask(String url, String filePath, OnDownloadListener listener) {
+                mUrl = url;
+                mFilePath = filePath;
+                mListener = listener;
+            }
+
+            /**
+            * 在异步任务之前，在主线程中
+            */
+            @Override
+            //1. 执行前
+            protected void onPreExecute() {
+                super.onPreExecute();
+                // 可操作UI  类似淘米,之前的准备工作
+                if(mListener != null){
+                    mListener.onStart();
+                }
+            }
+
+            /**
+            * 在另外一个线程中处理事件
+            *
+            * @param params 入参  煮米
+            * @return 结果
+            */
+            @Override
+            //2.执行中， 在另外一个线程中处理事件 String... params可变参数，数量任意
+            //抛出进度
+            //在异步线程处理，其余都是主线程
+            protected Boolean doInBackground(String... params) {
+                    String apkUrl = mUrl;
+
+                    try {
+                        // 构造URL
+                        URL url = new URL(apkUrl);
+                        // 构造连接，并打开
+                        URLConnection urlConnection = url.openConnection();
+                        InputStream inputStream = urlConnection.getInputStream();
+
+                        // 获取了下载内容的总长度
+                        int contentLength = urlConnection.getContentLength();
+
+                        // 对下载地址进行处理
+                        File apkFile = new File(mFilePath);
+                        if(apkFile.exists()){
+                            boolean result = apkFile.delete();
+                            if(!result){
+                                if(mListener != null){
+                                    mListener.onFail(-1, apkFile, "文件删除失败");
+                                }
+                                return false;
+                            }
+                        }
+
+                        // 已下载的大小
+                        int downloadSize = 0;
+
+                        // byte数组
+                        byte[] bytes = new byte[1024];
+
+                        int length;
+
+                        // 创建一个输入管道
+                        OutputStream outputStream = new FileOutputStream(mFilePath);
+
+                        // 不断的一车一车挖土,走到挖不到为止
+                        while ((length = inputStream.read(bytes)) != -1){
+                            // 挖到的放到我们的文件管道里
+                            outputStream.write(bytes, 0, length);
+                            // 累加我们的大小
+                            downloadSize += length;
+                            // 发送进度
+                            publishProgress(downloadSize * 100/contentLength);
+                        }
+
+                        inputStream.close();
+                        outputStream.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                        if(mListener != null){
+                            mListener.onFail(-2, new File(mFilePath), e.getMessage());
+                        }
+                        return false;
+                    }
+
+                if(mListener != null){
+                    mListener.onSuccess(0, new File(mFilePath));
+                }
+                return true;
+            }
+
+            @Override
+            // 3. 执行后
+            protected void onPostExecute(Boolean result) {
+                super.onPostExecute(result);
+                // 也是在主线程中 ，执行结果 处理
+            }
+
+            @Override
+            //4. 处理进度
+            protected void onProgressUpdate(Integer... values) {
+                super.onProgressUpdate(values);
+                // 收到进度，然后处理： 也是在UI线程中。
+                if (values != null && values.length > 0) {
+                    if(mListener != null){
+                        mListener.onProgress(values[0]);
+                    }
+                }
+
+            }
+
+        }
+
+
+        public interface OnDownloadListener{
+
+            void onStart();
+
+            void onSuccess(int code, File file);
+
+            void onFail(int code , File file, String message);
+
+            void onProgress(int progress);
+
+
+            //内部抽象类，其中定义的方法不是必须实现的，可以简化代码
+            abstract class SimpleDownloadListener implements OnDownloadListener{
+                @Override
+                public void onStart() {
+
+                }
+
+                @Override
+                public void onProgress(int progress) {}}}}
+
+                
+      ```
+   * 调用封装方法
+   ```java
+   DownloadHelper.download(APK_URL, "", new DownloadHelper.OnDownloadListener.SimpleDownloadListener() {
+            @Override
+            public void onSuccess(int code, File file) {
+
+            }
+
+            @Override
+            public void onFail(int code, File file, String message) {
+
+            }
+
+            @Override
+            public void onStart() {
+                super.onStart();
+            }
+
+            @Override
+            public void onProgress(int progress) {
+                super.onProgress(progress);
+            }
+        });
+   ```
+6. 注意
+   * 主线程执行excute（）方法
+   * Task实例必须在UI进程创建 
+   * 注意防止内存泄漏——弱引用
+        
