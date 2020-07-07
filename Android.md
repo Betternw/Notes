@@ -2627,8 +2627,6 @@ main_tab_icon_home.xml:
    * 注意防止内存泄漏——弱引用       
 ## <span id = "14">高级控件</span>
 ###  <span id = "15"> ListView</span>
-###  <span id = "16"> CardView</span>
-###  <span id = "17"> 屏幕适配</span>
 1. 由多个item组成，每个item都是一个视图
 2. Layout中设置ListView，和普通控件一样
 3. adpter将数据适配到每个item中
