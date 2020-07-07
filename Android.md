@@ -12,6 +12,9 @@
  * #### [网络操作](#11)
  * #### [Handler通信](#12)
  * #### [AsyncTask异步任务](#13)
+### * [高级控件](#14)
+ * #### [ListView](#15)
+ * #### [CardView](#16)
 ## <span id = "1">快捷键</span>
 alt+enter：错误纠正
 ## <span id = "2">第一章</span>
@@ -2620,5 +2623,410 @@ main_tab_icon_home.xml:
 6. 注意
    * 主线程执行excute（）方法
    * Task实例必须在UI进程创建 
-   * 注意防止内存泄漏——弱引用
-        
+   * 注意防止内存泄漏——弱引用       
+## <span id = "14">高级控件</span>
+###  <span id = "15"> ListView</span>
+1. 由多个item组成，每个item都是一个视图
+2. Layout中设置ListView，和普通控件一样
+3. adpter将数据适配到每个item中
+4. 基本实现ListView
+   * 在Layout中创建ListView
+   * 创建每一行的layout
+   * 创建每一行的数据
+   * 用adapter将数据填充到每一行的视图中（adpter和数据，adapter和视图）
+   * 优化缓存和读取速度
+   ```java
+   public class AppListActivity extends AppCompatActivity{
+
+    private ListView mListView;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        // 1.得到控件
+        // 2. 创建item的layout
+        mListView = (ListView) findViewById(R.id.list_view_demo);
+        //6. 创建头部图片Layout并转换为view
+        LayoutInflater layoutInflater = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        View headerView = layoutInflater.inflate(R.layout.header_list_demo, null);
+        // 7.header视图添加view
+        mListView.addHeaderView(headerView);
+        List<ResolveInfo> infos = getAppInfos();
+        //5. 将数据和adapter连接
+        mListView.setAdapter(new AppListAdapter(this, infos));
+    }
+
+    // 3. 获取所有数据 应用信息
+    private List<ResolveInfo> getAppInfos() {
+        Intent mainIntent = new Intent(Intent.ACTION_MAIN, null);
+        mainIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+        return getPackageManager().queryIntentActivities(mainIntent, 0);
+    }
+
+    // 4. 创建adapter  将数据和视图进行适配
+    public class AppListAdapter extends BaseAdapter{
+
+        private Context mContext;
+        //要填充的数据列表
+        private List<ResolveInfo> mInfos;
+
+        //构造器
+        public AppListAdapter(Context context, List<ResolveInfo> infos) {
+            mContext = context;
+            mInfos = infos;
+        }
+
+        @Override
+        // 数量
+        public int getCount() {
+
+            return mInfos.size();
+        }
+
+        @Override
+        //返回当前position位置的这一条
+        public Object getItem(int position) {
+
+            return mInfos.get(position);
+        }
+
+        @Override
+        //返回当前position位置的这一条的ID
+        public long getItemId(int position) {
+
+            return position;
+        }
+
+        @Override
+        //处理view-data 填充数据的一个过程
+        public View getView(final int position, View convertView, ViewGroup parent) {
+            ViewHolder viewHolder;
+            //将layout文件读成java的view文件
+            LayoutInflater layoutInflater = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+            if(convertView == null){
+                viewHolder = new ViewHolder();
+                //将layout读出 变成view文件
+                convertView = layoutInflater.inflate(R.layout.item_demo_list, null);
+                // 获取控件
+                viewHolder.nameTextView = (TextView) convertView.findViewById(R.id.title_text_view);
+                viewHolder.avatarImageView = (ImageView) convertView.findViewById(R.id.icon_image_view);
+                //8.1  将view与holder进行绑定
+                convertView.setTag(viewHolder);
+            } else {
+                //8.2 当view不为空，之前读过，曾保存在holder中，就可以直接读出view。
+                //不需要每次读取view的时候都新建控件
+                viewHolder = (ViewHolder) convertView.getTag();
+            }
+            // 将控件和数据之间进行绑定，设置控件的值
+            viewHolder.nameTextView.setText(mInfos.get(position).activityInfo.loadLabel(mContext.getPackageManager()));
+            viewHolder.avatarImageView.setImageDrawable(mInfos.get(position).activityInfo.loadIcon(mContext.getPackageManager()));
+
+            //点击事件 设置点击进item后获取系统信息
+            convertView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    ResolveInfo info = mInfos.get(position);
+
+                    //该应用的包名
+                    String pkg = info.activityInfo.packageName;
+                    //应用的主activity类
+                    String cls = info.activityInfo.name;
+
+                    ComponentName componet = new ComponentName(pkg, cls);
+
+                    Intent intent = new Intent();
+                    intent.setComponent(componet);
+                    startActivity(intent);
+                }
+            });
+            return convertView;
+        }
+
+        // 8. 优化
+        class ViewHolder {
+            ImageView avatarImageView;
+            TextView nameTextView;
+        }
+    }
+   ```
+5. 网络下载
+```java
+public class RequestDataActivity  extends AppCompatActivity {
+    private ListView mListView;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        //1.获取view
+        //2. 设置适配器（需要数据和item view）
+        mListView = (ListView) findViewById(R.id.list_view_demo);
+        //7 底部图片设置
+        LayoutInflater layoutInflater = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+        View view = layoutInflater.inflate(R.layout.header_list_demo, null);
+        mListView.addFooterView(view);
+
+        // 6 异步运行
+        new AppAsyncTask().execute();
+    }
+
+    // 4. 创建Adapter
+    public class AppListAdapter extends BaseAdapter {
+
+        private Context mContext;
+        private List<LessonInfo> mInfos;
+
+        public AppListAdapter(Context context, List<LessonInfo> infos) {
+            mContext = context;
+            mInfos = infos;
+        }
+
+        @Override
+        public int getCount() {
+            return mInfos.size();
+        }
+
+        @Override
+        public Object getItem(int position) {
+            return mInfos.get(position);
+        }
+
+        @Override
+        public long getItemId(int position) {
+            return position;
+        }
+
+        @Override
+        public View getView(final int position, View convertView, ViewGroup parent) {
+            ViewHolder viewHolder;
+            LayoutInflater layoutInflater = (LayoutInflater)getSystemService(Context.LAYOUT_INFLATER_SERVICE);
+            if(convertView == null){
+                viewHolder = new ViewHolder();
+                convertView = layoutInflater.inflate(R.layout.item_demo_list, null);
+                // 获取控件
+                viewHolder.nameTextView = (TextView) convertView.findViewById(R.id.title_text_view);
+                viewHolder.avatarImageView = (ImageView) convertView.findViewById(R.id.icon_image_view);
+                convertView.setTag(viewHolder);
+            } else {
+                viewHolder = (ViewHolder) convertView.getTag();
+            }
+            // 和数据之间进行绑定
+            viewHolder.nameTextView.setText(mInfos.get(position).getName());
+            viewHolder.avatarImageView.setVisibility(View.GONE);
+
+            return convertView;
+        }
+
+        class ViewHolder {
+            ImageView avatarImageView;
+            TextView nameTextView;
+        }
+    }
+
+
+
+    // 3. 异步获取并处理网络数据
+
+    public class AppAsyncTask extends AsyncTask<Void,Integer, String> {
+
+        @Override
+        // 3.1 请求数据——request方法
+        protected String doInBackground(Void... params) {
+
+            return request("http://www.imooc.com/api/teacher?type=2&page=1");
+        }
+
+        @Override
+        // 3.2 处理数据
+        protected void onPostExecute(String result) {
+            super.onPostExecute(result);
+            //创建数据集对象
+            LessonResult lessonResult = new LessonResult();
+            //将json对象的数据放入数据集对象中
+            try {
+                JSONObject jsonObject = new JSONObject(result);
+                int status = jsonObject.getInt("status");
+                String message = jsonObject.getString("msg");
+                lessonResult.setStatus(status);
+                lessonResult.setMessage(message);
+
+                List<LessonInfo> lessonInfos = new ArrayList<>();
+                JSONArray dataArray = jsonObject.getJSONArray("data");
+                for (int i = 0; i < dataArray.length(); i++) {
+                    LessonInfo lessonInfo = new LessonInfo();
+                    JSONObject tempJsonObject = (JSONObject) dataArray.get(i);
+                    lessonInfo.setID(tempJsonObject.getInt("id"));
+                    lessonInfo.setName(tempJsonObject.getString("name"));
+                    lessonInfos.add(lessonInfo);
+                }
+                lessonResult.setLessonInfos(lessonInfos);
+
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            //5 将数据传入adapter中
+            mListView.setAdapter(new AppListAdapter(RequestDataActivity.this, lessonResult.getLessonInfos()));
+        }
+
+
+        // 3.1.1 请求数据方法
+        private String request(String urlString) {
+            try {
+                URL url = new URL(urlString);
+                HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                connection.setConnectTimeout(30000);//超时时间
+                connection.setRequestMethod("GET");  // GET POST
+                connection.connect();
+                int responseCode = connection.getResponseCode();//状态码
+                String responseMessage = connection.getResponseMessage();
+                String result = null;
+                if(responseCode == HttpURLConnection.HTTP_OK){
+                    InputStreamReader inputStreamReader = new InputStreamReader(connection.getInputStream());
+                    BufferedReader bufferedReader = new BufferedReader(inputStreamReader);
+                    StringBuilder stringBuilder = new StringBuilder();
+                    String line;
+                    //读取数据 当不为空  就继续读下一行
+                    while ((line = bufferedReader.readLine()) != null) {
+                        stringBuilder.append(line);
+                    }
+                    result = stringBuilder.toString();
+                } else {
+                  // TODO:
+                }
+                return result;
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            return null;
+        }
+    }
+
+}
+
+```
+6. 引用不同的行布局——根据行类型进行判断
+```java
+public class ChatActivity extends AppCompatActivity {
+
+    private ListView mListView;
+    List<ChatMessage> mChatMessages = new ArrayList<>();
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        mListView = (ListView) findViewById(R.id.list_view_demo);
+        // 2. 创建信息类
+        ChatMessage chatMessage = new ChatMessage(1,2,"刘小明","8:20","你好吗","","",true);
+        ChatMessage chatMessage2 = new ChatMessage(2,1,"小军","8:21","我很好","","",false);
+        ChatMessage chatMessage3 = new ChatMessage(1,2,"刘小明","8:22","今天天气怎么样","","",true);
+        ChatMessage chatMessage4 = new ChatMessage(2,1,"小军","8:23","热成狗了","","",false);
+
+        mChatMessages.add(chatMessage);
+        mChatMessages.add(chatMessage2);
+        mChatMessages.add(chatMessage3);
+        mChatMessages.add(chatMessage4);
+
+        // 3. 将信息列表数据放入适配器
+        mListView.setAdapter(new ChatMessageAdapter(this, mChatMessages));
+    }
+
+    // 1. 适配器
+    public static class ChatMessageAdapter extends BaseAdapter {
+
+        //信息数据类型 发出的和接收的
+        public interface IMessageViewType {
+            int COM_MESSAGE = 0;
+            int TO_MESSAGE = 1;
+        }
+
+        private List<ChatMessage> mChatMessages;
+        private LayoutInflater mInflater;
+
+        //构造器
+        public ChatMessageAdapter(Context context, List<ChatMessage> coll) {
+            this.mChatMessages = coll;
+            mInflater = LayoutInflater.from(context);
+        }
+
+        public int getCount() {
+            return mChatMessages.size();
+        }
+
+        public Object getItem(int position) {
+            return mChatMessages.get(position);
+        }
+
+        public long getItemId(int position) {
+            return position;
+        }
+
+        //视图类型 根据不同的type（两种）返回不同的视图
+        public int getItemViewType(int position) {
+            ChatMessage entity = mChatMessages.get(position);
+            if (entity.getMsgType()) {
+                return IMessageViewType.COM_MESSAGE;
+            } else {
+                return IMessageViewType.TO_MESSAGE;
+            }
+
+        }
+
+        public int getViewTypeCount() {
+            return 2;
+        }
+
+        //根据当前类型生成不同视图
+        public View getView(int position, View convertView, ViewGroup parent) {
+
+            final ChatMessage entity = mChatMessages.get(position);
+            boolean isComMsg = entity.getMsgType();
+
+            ViewHolder viewHolder;
+            if (convertView == null) {
+                //根据不同的消息类型产生不同的视图
+                if (isComMsg) {
+                    convertView = mInflater.inflate(R.layout.chatting_item_msg_text_left, null);
+                } else {
+                    convertView = mInflater.inflate(R.layout.chatting_item_msg_text_right, null);
+                }
+                //根据视图得到控件，并设置数据
+                viewHolder = new ViewHolder();
+                viewHolder.mSendTime = (TextView) convertView.findViewById(R.id.tv_send_time);
+                viewHolder.mUserName = (TextView) convertView.findViewById(R.id.tv_username);
+                viewHolder.mContent = (TextView) convertView.findViewById(R.id.tv_chat_content);
+                viewHolder.mTime = (TextView) convertView.findViewById(R.id.tv_time);
+                viewHolder.mUserAvatar = (ImageView) convertView.findViewById(R.id.iv_user_head);
+                viewHolder.mIsComMessage = isComMsg;
+                convertView.setTag(viewHolder);
+            } else {
+                viewHolder = (ViewHolder) convertView.getTag();
+            }
+
+            viewHolder.mSendTime.setText(entity.getDate());
+            viewHolder.mContent.setText(entity.getContent());
+            viewHolder.mContent.setCompoundDrawablesWithIntrinsicBounds(0, 0, 0, 0);
+            viewHolder.mTime.setText("");
+            viewHolder.mUserName.setText(entity.getName());
+            if (isComMsg) {
+                viewHolder.mUserAvatar.setImageResource(R.drawable.avatar);
+            } else {
+                viewHolder.mUserAvatar.setImageResource(R.mipmap.ic_launcher);
+//                ImageLoader.getInstance().displayImage(entity.getAvatarUrl(), viewHolder.mUserAvatar);
+            }
+
+            return convertView;
+        }
+
+        class ViewHolder {
+            public TextView mSendTime;
+            public TextView mUserName;
+            public TextView mContent;
+            public TextView mTime;
+            public ImageView mUserAvatar;
+            public boolean mIsComMessage = true;
+        }
+    }
+```
+###  <span id = "16"> CardView</span>
