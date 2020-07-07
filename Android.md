@@ -2626,6 +2626,8 @@ main_tab_icon_home.xml:
    * 注意防止内存泄漏——弱引用       
 ## <span id = "14">高级控件</span>
 ###  <span id = "15"> ListView</span>
+###  <span id = "16"> CardView</span>
+###  <span id = "17"> 屏幕适配</span>
 1. 由多个item组成，每个item都是一个视图
 2. Layout中设置ListView，和普通控件一样
 3. adpter将数据适配到每个item中
@@ -3030,3 +3032,26 @@ public class ChatActivity extends AppCompatActivity {
     }
 ```
 ###  <span id = "16"> CardView</span>
+1. 使用时需要导入包，继承自FrameLayout
+* File——project structure——dependcies—— + library dependency——cardview 记得调整版本
+* build.gradle中：
+```java
+    implementation 'com.android.support:cardview-v7:26.1.0'
+```
+2. 常用属性
+   * cardBackgroundColor：背景色
+   * cardCoornerRadius：设置圆角半径
+   * contentPadding：设置内部padding
+   * cardElevation：设置阴影大小
+   * cardUseCompatPadding：默认为false，true 添加额外的padding绘制阴影
+   * cardPreventCornerOverlap：默认为true，添加额外的padding，防止内容和圆角重叠
+3. 使用
+   * 在控件外添加： android.support.v7.widget.CardView
+###  <span id = "17"> 屏幕适配</span>
+1. 屏幕尺寸：屏幕对角线的长度，单位是影讯
+2. 屏幕分辨率：单位是px
+3. 屏幕像素密度：每英寸上的像素点数，单位是dpi。相同尺寸，分辨率越高，像素密度越高（屏幕越清晰）
+4. px：像素点  sp：字体大小 dip、dp：定义尺寸
+5. idpi：mdpi：中密度 hdpi：高密度 xhdpi-xxhdpi-xxxhdpi：密度依次升高
+6. 屏幕适配：禁用绝对布局、少用px、使用wrap_content,match_content,layout_weight、重建布局
+7. 图片适配：使用自动拉审图、提供不同分辨率的备用位图
