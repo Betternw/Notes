@@ -16,6 +16,12 @@
  * #### [ListView](#15)
  * #### [CardView](#16)
  * #### [屏幕适配](#17)
+### * [数据存储](#18)
+ * #### [本地文件操作](#19)
+ * #### [数据库操作](#20)
+ * #### [手风琴特效](#21)
+ * #### [BroadcastReceiver](#22)
+ * #### [Application全局应用](#23)
 ## <span id = "1">快捷键</span>
 alt+enter：错误纠正
 ## <span id = "2">第一章</span>
@@ -3054,3 +3060,9 @@ public class ChatActivity extends AppCompatActivity {
 5. idpi：mdpi：中密度 hdpi：高密度 xhdpi-xxhdpi-xxxhdpi：密度依次升高
 6. 屏幕适配：禁用绝对布局、少用px、使用wrap_content,match_content,layout_weight、重建布局
 7. 图片适配：使用自动拉审图、提供不同分辨率的备用位图
+## <span id = "18">数据存储</span>
+###  <span id = "19">[本地文件操作]
+###  <span id = "20">[数据库操作]
+###  <span id = "21">[手风琴特效]
+###  <span id = "22">[BroadcastReceiver]
+###  <span id = "23">[Application全局应用]
