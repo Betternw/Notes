@@ -3061,8 +3061,8 @@ public class ChatActivity extends AppCompatActivity {
 6. 屏幕适配：禁用绝对布局、少用px、使用wrap_content,match_content,layout_weight、重建布局
 7. 图片适配：使用自动拉审图、提供不同分辨率的备用位图
 ## <span id = "18">数据存储</span>
-###  <span id = "19">[本地文件操作]
-###  <span id = "20">[数据库操作]
-###  <span id = "21">[手风琴特效]
-###  <span id = "22">[BroadcastReceiver]
-###  <span id = "23">[Application全局应用]
+###  <span id = "19">本地文件操作</span>
+###  <span id = "20">数据库操作</span>
+###  <span id = "21">手风琴特效</span>
+###  <span id = "22">BroadcastReceiver</span>
+###  <span id = "23">Application全局应用</span>
