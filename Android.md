@@ -3062,7 +3062,832 @@ public class ChatActivity extends AppCompatActivity {
 7. 图片适配：使用自动拉审图、提供不同分辨率的备用位图
 ## <span id = "18">数据存储</span>
 ###  <span id = "19">本地文件操作</span>
-###  <span id = "20">数据库操作</span>
-###  <span id = "21">手风琴特效</span>
-###  <span id = "22">BroadcastReceiver</span>
+1. SharedPreferences基本概念
+   * 本质是一个xml文件，通过键值对的方式存放信息
+   * 用于存放一些类似登录的配置信息
+2. 操作模式
+   * MODE_APPEND：追加方式存储
+   * MODE_PRIVATE：私有方式存储
+   * MODE_WORLD_READABLE：可被其他应用读取
+   * MODE_WORLD_WRITEABLE：可被其他应用写入
+   ```java
+        //3. SharePreference的读取（进入界面后有之前输入的数据）
+        //①获取SharePreference对象(参数1：文件名  参数2：模式)
+        SharedPreferences share = getSharedPreferences("myshare",MODE_PRIVATE);
+        //②根据key获取内容(参数1：key   参数2：当对应key不存在时，返回参数2的内容作为默认值)
+        String accStr = share.getString("account","");
+        String pwdStr = share.getString("pwd","");
+
+        accEdt.setText(accStr);
+        pwdEdt.setText(pwdStr);
+
+        findViewById(R.id.login_btn).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                //1.获取两个输入框的内容
+                String account = accEdt.getText().toString();
+                String pwd = pwdEdt.getText().toString();
+                //2.验证(admin  123)
+                    if(account.equals("admin") && pwd.equals("123")){
+                        //2.1 信息正确则存储信息到SharePreference
+                        //①获取SharePreference对象(参数1：文件名  参数2：模式)
+                        SharedPreferences share = getSharedPreferences("myshare",MODE_PRIVATE);
+                        //②获取Editor对象
+                        SharedPreferences.Editor edt = share.edit();
+                        //③存储信息   键值对的方式存储信息
+                        edt.putString("account",account);
+                        edt.putString("pwd",pwd);
+                        //④指定提交操作
+                        edt.commit();
+
+                        Toast.makeText(ShareActivity.this,"登录成功",Toast.LENGTH_SHORT).show();
+                    }else {
+                        //2.2验证失败，提示用户
+                        Toast.makeText(ShareActivity.this,"账号或密码错误",Toast.LENGTH_SHORT).show();
+                    }
+            }
+        });
+   ```
+3. 外部存储ExternalStorage
+   * 写入并存入文件夹进行读取
+   ```java
+   public class ExternalActivity extends AppCompatActivity {
+
+    EditText infoEdt;
+    TextView txt;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_external);
+
+        infoEdt = findViewById(R.id.info_edt);
+        txt = findViewById(R.id.textView);
+
+        // 6. 动态权限请求
+        int permisson = ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE);
+        //如果没有这个权限就申请权限
+        if(permisson!=PackageManager.PERMISSION_GRANTED){
+            //动态去申请权限
+            ActivityCompat.requestPermissions(this,new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},1);
+        }
+
+    }
+
+    //7. 申请码的处理  在申请的过程中要处理的事
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if(requestCode == 1){
+            //xxxxxxxxxxxxx
+        }
+    }
+
+    public void operate(View v){
+        // 1. 获取位置  得到根目录的绝对路径并创建目录文件
+        String path = Environment.getExternalStorageDirectory().getAbsolutePath() + "/Download/imooc.txt";
+        Log.e("TAG",path);
+        //判断内存卡是否存在
+        //if(Environment.getExternalStorageState().equals("mounted"))
+        switch (v.getId()){
+            case R.id.save_btn:
+                // 2. 创建文件
+                File f = new File(path);
+                try {
+                    if (!f.exists()) {
+                        f.createNewFile();
+                    }
+
+                    FileOutputStream fos = new FileOutputStream(path,true);
+                    String str = infoEdt.getText().toString();
+                    // 3. 将输入框内容写入文件
+                    // 4. 创建权限
+                    fos.write(str.getBytes());
+                }catch (IOException ioe){
+                    ioe.printStackTrace();
+                }
+                break;
+            case R.id.read_btn:
+                try {
+                    // 5. 读取文件内容并显示
+                    FileInputStream fis = new FileInputStream(path);
+                    byte[] b = new byte[1024];
+                    int len = fis.read(b);
+                    String str2 = new String(b,0,len);
+                    txt.setText(str2);
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                break;
+        }
+    }
+   ```
+   * 私有目录 卸载文件时数据也会清除掉
+      * Context.getExternalFilesDir(String type)：删除时清除数据
+      * Context.getExternalCacheDir()：删除时清除缓存
+4. 内部存储——data文件夹
+      * Context.getFilesDir(String type)：删除时清除数据
+      * Context.getCacheDir()：删除时清除缓存
+      ```java
+        public void operate(View v){
+
+        //  data/data/包名/files
+        //   getCacheDir()    data/data/包名/cache
+        File f = new File(getFilesDir(),"getFilesDirs.txt");
+        switch (v.getId()){
+            case R.id.save_btn:
+                try {
+                    if (!f.exists()) {
+                        f.createNewFile();
+                    }
+                    FileOutputStream fos = new FileOutputStream(f);
+                    fos.write(edt.getText().toString().getBytes());
+                    fos.close();
+                }catch (IOException e){
+                    e.printStackTrace();
+                }
+                break;
+            case R.id.read_btn:
+                try {
+                    FileInputStream fis = new FileInputStream(f);
+                    byte[] b = new byte[1024];
+                    int len = fis.read(b);
+                    String str2 = new String(b,0,len);
+                    txt.setText(str2);
+                } catch (FileNotFoundException e) {
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                break;
+        }
+      ```  
+###  <span id = "20">SQLite数据库操作</span>
+1. 开源的关系型数据库、轻量级
+2. 以行和列的形式存储数据，以便于理解。
+3. 本质是一个二进制文件，由核心部分、编译器、后端和附件合作。
+4. 数据库操作
+   * 查询：产生的是一个虚拟的结果集，并不是把数据取出来传给客户端  select * from 表名
+   * 添加
+   * 删除
+   * 修改
+5. 使用sql语句操作数据
+```java
+public class MainActivity extends Activity {
+
+    private EditText nameEdt , ageEdt , idEdt;
+    private RadioGroup genderGp;
+    private ListView stuList;
+    private RadioButton malerb;
+    private String genderStr = "男";
+    private SQLiteDatabase db;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        //添加操作
+        //1. 数据库名称，创建数据库
+        //如果只有一个数据库名称，那么这个数据库的位置会是在私有目录中
+        //如果带SD卡路径，那么数据库位置则在指定的路径下
+        String path = Environment.getExternalStorageDirectory() + "/stu.db";
+        //2. SQLiteOpenHelper  用于创建或打开数据库并对数据库的创建和版本进行管理
+        SQLiteOpenHelper helper = new SQLiteOpenHelper(this,path,null,2) {
+            @Override
+            public void onCreate(SQLiteDatabase sqLiteDatabase) {
+                //创建
+                Toast.makeText(MainActivity.this,"数据库创建",Toast.LENGTH_SHORT).show();
+                //如果数据库不存在，则会调用onCreate方法，那么我们可以将表的创建工作放在这里面完成
+                        /*
+                        String sql = "create table test_tb (_id integer primary key autoincrement," +
+                                "name varhcar(20)," +
+                                "age integer)";
+                        sqLiteDatabase.execSQL(sql);*/
+            }
+
+            @Override
+            public void onUpgrade(SQLiteDatabase sqLiteDatabase, int i, int i1) {
+                //升级
+                Toast.makeText(MainActivity.this,"数据库升级",Toast.LENGTH_SHORT).show();
+            }
+        };
+
+        //3. 获取数据库库对象，返回值是SQLiteDatabase 对象
+        //4. SQLiteDatabase  数据库对象类，用来管理和操作数据库，所有的操作都由这个类的对象完成
+         //       db.rawQuery();        查询    select * from 表名
+          //     db.execSQL();         添加、删除、修改、创建表
+        //3.1 数据库存在，则直接打开数据库
+        //3.2 数据库不存在，则调用创建数据库的方法，再打开数据库
+        //3.3 数据库存在，但版本号升高了，则调用数据库升级方法
+        db = helper.getReadableDatabase();
+
+        // 5 获取控件 并为单选按钮设置点击事件
+        nameEdt = (EditText) findViewById(R.id.name_edt);
+        ageEdt = (EditText) findViewById(R.id.age_edt);
+        idEdt = (EditText) findViewById(R.id.id_edt);
+        malerb = (RadioButton) findViewById(R.id.male);
+
+        genderGp = (RadioGroup) findViewById(R.id.gender_gp);
+        genderGp.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup radioGroup, int i) {
+                if(i == R.id.male){
+                    //“男”
+                    genderStr = "男";
+                }else{
+                    //"女"
+                    genderStr = "女";
+                }
+            }
+        });
+
+        stuList = (ListView) findViewById(R.id.stu_list);
+    }
+
+
+
+    // 6. 绑定点击操作
+    public void operate(View v){
+
+        String nameStr = nameEdt.getText().toString();
+        String ageStr = ageEdt.getText().toString();
+        String idStr = idEdt.getText().toString();
+        switch (v.getId()){
+            //添加
+            case R.id.insert_btn:
+                //6.1 添加数据到数据库中
+                //String sql = "insert into info_tb (name,age,gender) values ('"+nameStr+"',"+ageStr+",'"+genderStr+"')";
+                //db.execSQL(sql);
+                // 6.2 第二种方式添加数据  单选和年龄通过文本框获得，年龄通过监听点击事件获得
+                String sql = "insert into info_tb (name,age,gender) values (?,?,?)";
+                db.execSQL(sql,new String[]{nameStr,ageStr,genderStr});
+                Toast.makeText(this,"添加成功",Toast.LENGTH_SHORT).show();
+                break;
+
+
+
+                //查询
+            case R.id.select_btn:
+                //SQLiteOpenHelper
+                //select * from 表名 where _id = ?
+                // 6.3 查询所有信息的sql语句
+                String sql2 = "select * from info_tb";
+                //根据id查询
+                if(!idStr.equals("")){
+                    sql2 += " where _id=" + idStr;
+                }
+                //6.4 查询结果并保存到cursor对象中，类似一张表
+                Cursor c = db.rawQuery(sql2,null);
+
+                // 6.5 将结果展示在listview中，需要创建适配器
+                //SimpleCursorAdapter  游标适配器
+                //SimpleAdapter a = new SimpleAdapter()
+                //参数3：数据源
+                SimpleCursorAdapter adapter = new SimpleCursorAdapter(
+                        this, R.layout.item,c,
+                        //注意要写 _id
+                        new String[]{"_id","name","age","gender"},
+                        new int[]{R.id.id_item,R.id.name_item,R.id.age_item,R.id.gender_item});
+                stuList.setAdapter(adapter);
+                break;
+
+
+
+                //删除
+            case R.id.delete_btn:
+                //' '   "23"   23
+                //6.6 删除的sql语句
+                String sql3 = "delete from info_tb where _id=?";
+                db.execSQL(sql3,new String[]{idStr});
+                Toast.makeText(this,"删除成功",Toast.LENGTH_SHORT).show();
+                break;
+
+
+                //修改
+            case R.id.update_btn:
+                // 6.6 修改的sql语句
+                String sql4 = "update info_tb set name=? , age=? , gender=?  where _id=?";
+                db.execSQL(sql4,new String[]{nameStr,ageStr,genderStr,idStr});
+                Toast.makeText(this,"修改成功",Toast.LENGTH_SHORT).show();
+                break;
+        }
+        // 6.7 操作后清空输入栏
+        nameEdt.setText("");
+        ageEdt.setText("");
+        idEdt.setText("");
+        malerb.setChecked(true);
+    }
+}
+```
+6. 使用Api操作数据
+```java
+public class MainActivity2 extends Activity {
+
+    private EditText nameEdt , ageEdt , idEdt;
+    private RadioGroup genderGp;
+    private ListView stuList;
+    private RadioButton malerb;
+    private String genderStr = "男";
+    private SQLiteDatabase db;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        //添加操作
+        //数据库名称
+        //如果只有一个数据库名称，那么这个数据库的位置会是在私有目录中
+        //如果带SD卡路径，那么数据库位置则在指定的路径下
+        String path = Environment.getExternalStorageDirectory() + "/stu.db";
+        SQLiteOpenHelper helper = new SQLiteOpenHelper(this,path,null,2) {
+            @Override
+            public void onCreate(SQLiteDatabase sqLiteDatabase) {
+                //创建
+                Toast.makeText(MainActivity2.this,"数据库创建",Toast.LENGTH_SHORT).show();
+                //如果数据库不存在，则会调用onCreate方法，那么我们可以将表的创建工作放在这里面完成
+                        /*
+                        String sql = "create table test_tb (_id integer primary key autoincrement," +
+                                "name varhcar(20)," +
+                                "age integer)";
+                        sqLiteDatabase.execSQL(sql);*/
+            }
+
+            @Override
+            public void onUpgrade(SQLiteDatabase sqLiteDatabase, int i, int i1) {
+                //升级
+                Toast.makeText(MainActivity2.this,"数据库升级",Toast.LENGTH_SHORT).show();
+            }
+        };
+
+        //用于获取数据库库对象
+        //1.数据库存在，则直接打开数据库
+        //2.数据库不存在，则调用创建数据库的方法，再打开数据库
+        //3.数据库存在，但版本号升高了，则调用数据库升级方法
+        db = helper.getReadableDatabase();
+
+        nameEdt = (EditText) findViewById(R.id.name_edt);
+        ageEdt = (EditText) findViewById(R.id.age_edt);
+        idEdt = (EditText) findViewById(R.id.id_edt);
+        malerb = (RadioButton) findViewById(R.id.male);
+
+        genderGp = (RadioGroup) findViewById(R.id.gender_gp);
+        genderGp.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup radioGroup, int i) {
+                if(i == R.id.male){
+                    //“男”
+                    genderStr = "男";
+                }else{
+                    //"女"
+                    genderStr = "女";
+                }
+            }
+        });
+
+        stuList = (ListView) findViewById(R.id.stu_list);
+    }
+
+//    SQLiteOpenHelper
+//    SQLiteDatabase
+    public void operate(View v){
+
+        String nameStr = nameEdt.getText().toString();
+        String ageStr = ageEdt.getText().toString();
+        String idStr = idEdt.getText().toString();
+        switch (v.getId()){
+            case R.id.insert_btn:
+                //在SqliteDatabase类下，提供四个方法
+                //insert（添加）、delete（删除）、update（修改）、query（查询）
+                //都不需要写sql语句
+                //参数1：你所要操作的数据库表的名称
+                //参数2：可以为空的列.  如果第三个参数是null或者说里面没有数据
+                //那么我们的sql语句就会变为insert into info_tb () values ()  ，在语法上就是错误的
+                //此时通过参数3指定一个可以为空的列，语句就变成了insert into info_tb (可空列) values （null）
+                ContentValues values = new ContentValues();
+                //insert into 表明(列1，列2) values（值1，值2）
+                values.put("name",nameStr);
+                values.put("age",ageStr);
+                values.put("gender",genderStr);
+                long id = db.insert("info_tb",null,values);
+                Toast.makeText(this,"添加成功，新学员学号是：" + id,Toast.LENGTH_SHORT).show();
+                break;
+            case R.id.select_btn:
+                //select 列名 from 表名 where 列1 = 值1 and 列2 = 值2
+                //参数2：你所要查询的列。{”name","age","gender"},查询所有传入null/{“*”}
+                //参数3：条件（针对列）
+                //参数5:分组
+                //参数6：当 group by对数据进行分组后，可以通过having来去除不符合条件的组
+                //参数7:排序
+                Cursor c = db.query("info_tb",null,null,null,null,null,null);
+
+                //SimpleCursorAdapter
+                //SimpleAdapter a = new SimpleAdapter()
+                //参数3：数据源
+                SimpleCursorAdapter adapter = new SimpleCursorAdapter(
+                        this, R.layout.item,c,
+                        new String[]{"_id","name","age","gender"},
+                        new int[]{R.id.id_item,R.id.name_item,R.id.age_item,R.id.gender_item});
+                stuList.setAdapter(adapter);
+                break;
+            case R.id.delete_btn:
+                int count = db.delete("info_tb","_id=?",new String[]{idStr});
+                if(count > 0) {
+                    Toast.makeText(this, "删除成功", Toast.LENGTH_SHORT).show();
+                }
+                break;
+            case R.id.update_btn:
+                ContentValues values2 = new ContentValues();
+                //update info_tb set 列1=xx , 列2=xxx where 列名 = 值
+                values2.put("name",nameStr);
+                values2.put("age",ageStr);
+                values2.put("gender",genderStr);
+                int count2 = db.update("info_tb",values2,"_id=?",new String[]{idStr});
+                if(count2 > 0) {
+                    Toast.makeText(this, "修改成功", Toast.LENGTH_SHORT).show();
+                }
+                break;
+        }
+        nameEdt.setText("");
+        ageEdt.setText("");
+        idEdt.setText("");
+        malerb.setChecked(true);
+    }
+```
+7. SQLite操作数据的两套方法：
+   * rawQuery（） 查询  execSql（）——需要些sql语句
+   * insert delete update query 不用写语句，根据参数操作数据库
+8. 数据库操作封装
+app1
+```java
+public class MainActivity3 extends Activity {
+
+    private EditText nameEdt , ageEdt , idEdt;
+    private RadioGroup genderGp;
+    private ListView stuList;
+    private RadioButton malerb;
+    private String genderStr = "男";
+    private StudentDao dao;
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        dao = new StudentDao(this);
+
+        nameEdt = (EditText) findViewById(R.id.name_edt);
+        ageEdt = (EditText) findViewById(R.id.age_edt);
+        idEdt = (EditText) findViewById(R.id.id_edt);
+        malerb = (RadioButton) findViewById(R.id.male);
+
+        genderGp = (RadioGroup) findViewById(R.id.gender_gp);
+        genderGp.setOnCheckedChangeListener(new RadioGroup.OnCheckedChangeListener() {
+            @Override
+            public void onCheckedChanged(RadioGroup radioGroup, int i) {
+                if(i == R.id.male){
+                    //“男”
+                    genderStr = "男";
+                }else{
+                    //"女"
+                    genderStr = "女";
+                }
+            }
+        });
+
+        stuList = (ListView) findViewById(R.id.stu_list);
+    }
+
+    public void operate(View v){
+
+        String nameStr = nameEdt.getText().toString();
+        String ageStr = ageEdt.getText().toString();
+        String idStr = idEdt.getText().toString();
+        switch (v.getId()){
+            case R.id.insert_btn:
+                Student stu = new Student(nameStr,Integer.parseInt(ageStr),genderStr);
+                dao.addStudent(stu);
+                Toast.makeText(this,"添加成功",Toast.LENGTH_SHORT).show();
+                break;
+            case R.id.select_btn:
+                String key="",value="";
+                if(!nameStr.equals("")){
+                    value = nameStr;
+                    key = "name";
+                }else if(!ageStr.equals("")){
+                    value = ageStr;
+                    key = "age";
+                }else if(!idStr.equals("")){
+                    value = idStr;
+                    key = "_id";
+                }
+                Cursor c;
+                if(key.equals("")){
+                   c = dao.getStudent();
+                }else {
+                   c = dao.getStudent(key, value);
+                }
+
+                SimpleCursorAdapter adapter = new SimpleCursorAdapter(
+                        this, R.layout.item,c,
+                        new String[]{"_id","name","age","gender"},
+                        new int[]{R.id.id_item,R.id.name_item,R.id.age_item,R.id.gender_item});
+                stuList.setAdapter(adapter); /**/
+                break;
+            case R.id.delete_btn:
+
+                String[] params = getParams(nameStr,ageStr,idStr);
+
+                dao.deleteStudent(params[0],params[1]);
+                Toast.makeText(this,"删除成功",Toast.LENGTH_SHORT).show();
+                break;
+            case R.id.update_btn:
+                Student stu2 = new Student(Integer.parseInt(idStr),nameStr,Integer.parseInt(ageStr),genderStr);
+                dao.updateStudent(stu2);
+                Toast.makeText(this,"修改成功",Toast.LENGTH_SHORT).show();
+            break;
+        }
+        nameEdt.setText("");
+        ageEdt.setText("");
+        idEdt.setText("");
+        malerb.setChecked(true);
+    }
+
+    public String[] getParams(String nameStr,String ageStr,String idStr){
+        String[] params = new String[2];
+        if(!nameStr.equals("")){
+            params[1] = nameStr;
+            params[0] = "name";
+        }else if(!ageStr.equals("")){
+            params[1] = ageStr;
+            params[0] = "age";
+        }else if(!idStr.equals("")){
+            params[1] = idStr;
+            params[0] = "_id";
+        }
+        return params;
+    }
+```
+
+```java
+public class Student{
+        //私有属性
+        private int id;
+        private String name;
+        private int age;
+        private String gender;
+        //无参构造
+        public Student(){
+
+        }
+
+        public Student(String name, int age, String gender) {
+            this.name = name;
+            this.age = age;
+            this.gender = gender;
+        }
+
+    //有参构造
+        public Student(int id, String name, int age, String gender) {
+            super();
+            this.id = id;
+            this.name = name;
+            this.age = age;
+            this.gender = gender;
+        }
+        //创建的setter和getter方法
+        public int getId() {
+            return id;
+        }
+        public void setId(int id) {
+            this.id = id;
+        }
+        public String getName() {
+            return name;
+        }
+        public void setName(String name) {
+            this.name = name;
+        }
+        public int getAge() {
+            return age;
+        }
+        public void setAge(int age) {
+            this.age = age;
+        }
+        public String getGender() {
+            return gender;
+        }
+        public void setGender(String gender) {
+            this.gender = gender;
+        }
+
+
+}
+
+
+```
+
+```java
+public class StudentDao {
+    private SQLiteDatabase db;
+
+    public StudentDao(Context context){
+        String path = Environment.getExternalStorageDirectory() + "/stu.db";
+        SQLiteOpenHelper helper = new SQLiteOpenHelper(context,path,null,2) {
+            @Override
+            public void onCreate(SQLiteDatabase sqLiteDatabase) {
+            }
+
+            @Override
+            public void onUpgrade(SQLiteDatabase sqLiteDatabase, int i, int i1) {
+            }
+        };
+        db = helper.getReadableDatabase();
+    }
+
+    public void addStudent(Student stu){
+        String sql = "insert into info_tb (name,age,gender) values(?,?,?)";
+        db.execSQL(sql,new Object[]{stu.getName(),stu.getAge()+"",stu.getGender()});
+    }
+
+    public Cursor getStudent(String... strs){
+        //1.查询所有(没有参数)
+        String sql = "select * from info_tb ";
+        //2.含条件查询（姓名/年龄/编号）（参数形式：第一个参数指明条件，第二个参数指明条件值）
+        if(strs.length != 0){
+            sql += " where " + strs[0] + "='" + strs[1] + "'";
+        }
+        Cursor c = db.rawQuery(sql,null);
+        return c;
+    }
+
+    public ArrayList<Student> getStudentInList(String... strs){
+        ArrayList<Student> list = new ArrayList<>();
+        Cursor c = getStudent(strs);
+        while (c.moveToNext()){
+            int id = c.getInt(0);
+            String name = c.getString(1);
+            int age = c.getInt(2);
+            String gender = c.getString(3);
+            Student s = new Student(id,name,age,gender);
+            list.add(s);
+        }
+        return list;
+    }
+
+    public void deleteStudent(String... strs){
+        String sql  = "delete from info_tb where " + strs[0] + "='" + strs[1] + "'";
+        db.execSQL(sql);
+    }
+
+    public void updateStudent(Student stu){
+        String sql = "update info_tb set name=?,age=?,gender=? where _id=?";
+        db.execSQL(sql,new Object[]{stu.getName(),stu.getAge(),stu.getGender(),stu.getId()});
+    }
+
+```
+###  <span id = "21">手风琴特效——ExpandableListView</span>
+1. 基本介绍  ExpandableListView-Imooc
+   * 和ListView区别
+      * 继承自ListView
+      * 可扩展可收缩可分组
+   * 应用于按照关键字进行分组，比如联系人列表等
+2. 常用属性
+   * groupIndicator：分组指示器 一个item 
+   * childIndicator
+   * childDivider：设置分割线
+3. 常用方法
+   * setAdapter：适配器
+   * setOnGroupClickListener：点击分组条目的回调
+   * setOnChildClickListener：点击childItem的回调
+   * setOnGroupCollapseListener：点击group收缩的回调
+   * setOnGroupExpandListener：点击group展开的回调
+###  <span id = "22">BroadcastReceiver 广播接收器</span>
+1. Broadcast实现
+   * 消息订阅者注册（Binder机制）
+      * 静态注册 Manifest.xml中
+      * 动态注册 运行期间注册
+   * 消息发布者通过处理中心AMS进行处理
+   * 发送广播给消息订阅者（Binder机制）
+2. 系统广播：安卓系统发送广播（比如电量，网络状态变化等），应用注册并接收
+   * 静态注册
+   ```java
+   // 1. 创建广播
+    public class ImoocBroadcastReceiver extends BroadcastReceiver {
+
+        TextView mTextView;
+        public ImoocBroadcastReceiver() {
+        }
+
+        public ImoocBroadcastReceiver(TextView textView) {
+            mTextView = textView;
+        }
+
+        private static final String TAG = "ImoocBroadcastReceiver";
+        @Override
+        //接收广播时回调的方法
+        public void onReceive(Context context, Intent intent) {
+            // 接收广播
+            if(intent != null){
+                // 接收到的是什么广播
+                String action  = intent.getAction();
+                Log.d(TAG, "onReceive: " + action);
+
+                // 判断是什么广播（是不是我们自己发送的自定义广播）
+                if(TextUtils.equals(action, MainActivity.MY_ACTION)){
+                    // 获取广播携带的内容， 可自定义的数据
+                    String content = intent.getStringExtra(MainActivity.BROADCAST_CONTENT);
+                    if(mTextView != null){
+                        mTextView.setText("接收到的action是："+ action + "\n接收到的内容是：\n" + content);
+                    }
+                }
+            }
+   
+   ```
+   ```java
+     // 1. 创建广播
+        //2. 注册静态广播
+        <!-- 静态注册广播接收器 -->
+        <receiver
+            android:name=".ImoocBroadcastReceiver">
+
+            <!-- 接收哪些广播 -->
+
+            <intent-filter>
+                <!-- 开机广播 -->
+                <action android:name="android.intent.action.BOOT_COMPLETED"/>
+                <!-- 电量低广播 -->
+                <action android:name="android.intent.action.BATTERY_LOW"/>
+                <!-- 应用被安装广播 -->
+                <action android:name="android.intent.action.PACKAGE_INSTALL"/>
+                <!-- 应用被卸载广播 -->
+                <action android:name="android.intent.action.PACKAGE_REMOVED"/>
+                <!-- 数据类型 -->
+                <data android:scheme="package"/>
+
+                <!-- 自定义广播 -->
+                <action android:name="com.imooc.demo.afdsabfdaslj"/>
+
+            </intent-filter>
+
+        </receiver>
+   ```
+   * 动态注册
+3. 应用广播：应用发送广播，其他应用接收
+   * 自定义广播动态注册（自己发送自己接收）
+   ```java
+   // 1. 创建广播
+    public class ImoocBroadcastReceiver extends BroadcastReceiver {
+
+        TextView mTextView;
+        public ImoocBroadcastReceiver() {
+        }
+
+        public ImoocBroadcastReceiver(TextView textView) {
+            mTextView = textView;
+        }
+
+        private static final String TAG = "ImoocBroadcastReceiver";
+        @Override
+        //接收广播时回调的方法
+        public void onReceive(Context context, Intent intent) {
+            // 6.2 接收广播
+            if(intent != null){
+                // 接收到的是什么广播
+                String action  = intent.getAction();
+                Log.d(TAG, "onReceive: " + action);
+
+                // 判断是什么广播（是不是我们自己发送的自定义广播）
+                if(TextUtils.equals(action, MainActivity.MY_ACTION)){
+                    // 获取广播携带的内容， 可自定义的数据
+                    String content = intent.getStringExtra(MainActivity.BROADCAST_CONTENT);
+                    if(mTextView != null){
+                        mTextView.setText("接收到的action是："+ action + "\n接收到的内容是：\n" + content);
+                    }
+                }
+            }
+   ```
+   * 两个应用，一个发送一个接收
+      * 建立两个包（包名在string.xml和build.gradle中改）
+      * 两个包建立相同的action，一个发送一个接收     public static final String MY_ACTION = "com.imooc.demo.afdsabfdaslj";
+   ```java
+     protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        //设置页面的名字
+        // 用包名做title
+        setTitle(getPackageName());
+4. 生命周期
+   * 广播类中的onReceive方法在主线程中，如果操作十秒，会阻塞主线程
+   * 需要onReceive中建立子线程进行处理，接到消息后分类给子线程进行处理
 ###  <span id = "23">Application全局应用</span>
+1. Application是维护全局状态的基类，在启动应用进程时会创建一个Application对象。每一个应用进程都有一个。
+2. 可以扩展Application类，让系统使用扩展的类的对象
+3. 组件通过intent传递数据
+4. 作用：共享全局状态，初始化应用需要的服务
+5. Application对象和静态单例
+   * 静态单例模块化程度更好，更加灵活
+   * Application就是一个context，有访问资源的能力；静态单例能接受context参数
+   * Application对象能接收系统回调，生命周期由系统控制
+6. 生命周期——诞生于其他任何组件对象之前并且一直存活，直到应用进程结束
+7. 对象由系统管理，回调函数都运行于UI线程。常见的回调函数：onCreate，onConfigurationChanged（配置变更），onLowMemory
