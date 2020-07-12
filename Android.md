@@ -22,6 +22,13 @@
  * #### [手风琴特效](#21)
  * #### [BroadcastReceiver](#22)
  * #### [Application全局应用](#23)
+### * [框架](#24)
+* #### [OkHttp](#25)
+* #### [EventBus](#26)
+* #### [ReculerView](#27)
+* #### [Glide](#28)
+* #### [GreenDao](#29)
+* #### [Application全局应用](#30)
 ## <span id = "1">快捷键</span>
 alt+enter：错误纠正
 ## <span id = "2">第一章</span>
@@ -3891,3 +3898,99 @@ public class StudentDao {
    * Application对象能接收系统回调，生命周期由系统控制
 6. 生命周期——诞生于其他任何组件对象之前并且一直存活，直到应用进程结束
 7. 对象由系统管理，回调函数都运行于UI线程。常见的回调函数：onCreate，onConfigurationChanged（配置变更），onLowMemory
+## <span id = "24">框架</span>
+###  <span id = "25">OkHttp</span>
+1. Okio
+   * 访问存储处理数据
+   * ByteString类——字节串，将字节集结成串成为一个统一的值，就可以对这个值进行处理。【处理数据】
+      * 自动返回编码值
+      * 返回校验值  byteString.md5
+      * 写入输出流中
+      * ByteString.Base64  将图片等二进制数据放入json文件中
+      * ByteString.encodeUtf8 
+      * byteString1.sha1().hex() 获取校验值并转化为字符串
+   * Okio—Buffer——读取存储数据
+      * 流向程序的为输入流，Source为数据源接口，提供read（）、timeout（）、close（）
+      * 程序生成数据通过输出流进行输出：Sink方接口，write（）、flush（）缓存数据写到目的地、timeout（）超时处理、close（）
+      * BufferedSource和BufferedSink   Buffer中的输入输出，写入缓存区或者从缓存区读出，提高读写效率
+      ```java
+        BufferedSource source = Okio.buffer(Okio.source(new File("in.txt")));
+
+        BufferedSink sink = Okio.buffer(Okio.sink(new File("out.txt")));
+
+        source.readAll(sink);
+
+        source.close();
+        sink.close();
+      ```
+      * 移动电源类似Buffer
+      * Buffer内部类似ArraList
+2. OkHttp
+   * Http Client ：和服务器进行交互，处理网络请求。处理APP的请求并给APP响应
+   * 创建请求Request：URL、方法（get post）、headers（请求头）、body（信息主体）
+      * Get
+        ```java
+                Request.Builder builder = new Request.Builder();
+                builder.url(GET_URL);
+                Request request = builder.build();
+                Call call = mClient.newCall(request);
+                Response response = call.execute(); // 同步方法
+        ```
+      * Post：
+        ```java
+        Request.Builder builder = new Request.Builder();
+            builder.url(POST_URL);
+            builder.post(RequestBody.create(MEDIA_TYPE_MARKDOWN, "Hello world github/linguist#1 **cool**, and #1!"));
+            Request request = builder.build();
+            Call call = mClient.newCall(request);
+        ```
+   * Response:请求的相应。返回码（code）（200-ok）、headers、body（字符串或者数据流）
+###  <span id = "26">EventBus</span>
+1. EventBus
+   * 发送方将事件发送到Bus中，进行传递，订阅方订阅和处理事件。EventBus相当于一个黑盒子。
+   * 从而实现组件间的相互通信
+2. 常规使用监听器和本地广播
+3. 建立通信
+   * 定义事件：java对象
+   * 订阅事件：在BUs中注册、处理（回调函数，参数类型是定义的事件类型）
+   * 发布事件：实现发布
+4. 线程模式
+   * 线程切换：handler或者asnayc task
+   * ThreadMode：控制具体回调函数运行于哪个线程
+      * POSTing
+         * 发布和订阅处理运行于同一线程。默认方式
+      * Main
+         * 订阅函数运行于主线程
+         * 发布在主，订阅在主
+         * 发布在子，订阅在主
+      * Main_Ordered
+         * 订阅在主
+         * 在Main中，发布在主线程执行后订阅回调会立即执行，会导致发布的后续指令阻塞
+         * 在MainOrder中，发布在主线程执行后后续会立即执行，不用等待时事件处理方的处理，从而不会被订阅回调阻塞
+      * Background
+         * 发布在子，订阅回调运行在子，同一线程
+         * 发布在主，订阅回调运行在子
+      * Async
+         * 发布在某一线程，订阅回调运行在新开的线程中。
+5. Sticky——粘性事件 发布时将事件缓存起来，实现先发布再订阅
+###  <span id = "27">ReculerView</span>
+1. 有限的窗口展示大量的数据
+2. 灵活可配置、可自定义和重复利用的item、高度解耦的控件。
+3. 回收和复用View，将功能交给别的类来操作
+   * LayoutManager：布局管理器，进行展示样式
+      * LinearLayoutManager：线性布局
+      * GridLayoutManager：网格布局
+      * StaggeredGridLayoutManager：瀑布流布局
+   * Adapter：处理视图和数据的关系
+      * onCreateViewHolder：创建ViewHolder并返回，每一个ViewHolder容纳一个item实例
+      * onBindViewHolder：将数据放入对应的ViewHolder
+      * getItemCount：返回int，是item的数量
+   * ViewHolder：容纳itemView的实例（在列表或者网格中单独的view）
+      * 一个holder是一个itemView。
+4. 流程
+   * 准备被展示的数据
+   * 适配器连接数据和视图（展示的逻辑等 Adapter+ViewHolder）
+   * LayoutManager控制视图的展示形式（抽象类，有实例化的类）
+
+###  <span id = "28">Glide</span>
+###  <span id = "29">GreenDao</span>
