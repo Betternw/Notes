@@ -25,10 +25,9 @@
 ### * [框架](#24)
 * #### [OkHttp](#25)
 * #### [EventBus](#26)
-* #### [ReculerView](#27)
+* #### [RecyclerView](#27)
 * #### [Glide](#28)
 * #### [GreenDao](#29)
-* #### [Application全局应用](#30)
 ## <span id = "1">快捷键</span>
 alt+enter：错误纠正
 ## <span id = "2">第一章</span>
@@ -3973,7 +3972,7 @@ public class StudentDao {
       * Async
          * 发布在某一线程，订阅回调运行在新开的线程中。
 5. Sticky——粘性事件 发布时将事件缓存起来，实现先发布再订阅
-###  <span id = "27">ReculerView</span>
+###  <span id = "27">RecyclerView</span>
 1. 有限的窗口展示大量的数据
 2. 灵活可配置、可自定义和重复利用的item、高度解耦的控件。
 3. 回收和复用View，将功能交给别的类来操作
@@ -3991,6 +3990,152 @@ public class StudentDao {
    * 准备被展示的数据
    * 适配器连接数据和视图（展示的逻辑等 Adapter+ViewHolder）
    * LayoutManager控制视图的展示形式（抽象类，有实例化的类）
+###  <span id = "28">Glide 第三方组件加载库</span>
+1. 加载图片的种类
+   * 资源文件中的图片
+   * 手机中的图片
+   * 网络中的图片
+2. 加载图片的步骤
+   * 明确图片的地址
+   * 将图片转换为可被加载的对象
+   * 通过图片加载控件展示图片
+3. 图片加载库
+4. 使用Glide进行加载
+```java
+  /**
+     * 使用Glide加载网络图片
+     * @param img 网络图片地址
+     */
+    private void glideLoadImage (String img) {
+//      4. 通过 RequestOptions 对象来设置Glide的配置
+        RequestOptions options = new RequestOptions()
+//                设置图片变换为圆角
+                .circleCrop()
+//                设置站位图
+                .placeholder(R.mipmap.loading)
+//                设置加载失败的错误图片
+                .error(R.mipmap.loader_error);
 
-###  <span id = "28">Glide</span>
+//      1. Glide.with 会创建一个图片的实例，接收 Context、Activity、Fragment
+        Glide.with(this)
+//                2. 指定需要加载的图片资源，接收 Drawable对象、网络图片地址、本地图片文件、资源文件、二进制流、Uri对象等等
+                .load(img)
+//                指定配置
+                .apply(options)
+//                3. 用于展示图片的ImageView
+                .into(mIv);
+    }
+```
+5. Generated API全局配置——为glide提供自定义选项，将配置打包。
+   * 引入Generated API支持库
+   * 创建类，继承AppGlideModule并添加@GlideModule注解
+   ```java
+   @GlideModule
+    public class MyAppGlideModule extends AppGlideModule {
+    }
+
+   ```
+   * 创建类，添加@GlideExtension注解，并实现private构造函数
+   ```java
+   
+    @GlideExtension
+    public class MyGlideExtension{
+
+        /**
+        * 实现private的构造函数
+        */
+        private MyGlideExtension() {
+        }
+
+        @GlideOption
+        public static void injectOptions (RequestOptions options) {
+            options
+    //                设置图片变换为圆角
+                    .circleCrop()
+    //                设置站位图
+                    .placeholder(R.mipmap.loading)
+    //                设置加载失败的错误图片
+                    .error(R.mipmap.loader_error);
+
+        }
+    }
+   ```
+   ```java
+     private void glideAppLoadImage (String img) {
+        /**
+         * 不想每次都通过 .apply(options) 的方式来进行配置的时候，可以使用GlideApp的方式来进行全局统一的配置
+         * 需要注意以下规则：
+         * 1、引入 repositories {mavenCentral()}  和 dependencies {annotationProcessor 'com.github.bumptech.glide:compiler:4.8.0'}
+         * 2、集成 AppGlideModule 的类并且通过 @GlideModule 进行了注解
+         * 3、有一个使用了 @GlideExtension 注解的类 MyGlideExtension，并实现private的构造函数
+         * 4、在 MyGlideExtension 可以通过被 @GlideOption 注解了的静态方法来添加可以被GlideApp直接调用的方法，该方法默认接受第一个参数为：RequestOptions
+         */
+            GlideApp.with(this)
+                    .load(img)
+        //               调用在MyGlideExtension中实现的，被@GlideOption注解的方法，不需要传递 RequestOptions 对象
+                    .injectOptions()
+                    .into(mIv);
+            }
+
+   ```
 ###  <span id = "29">GreenDao</span>
+1. ORM框架——在关系型数据库和对象之间做一个映射，就不需要操作sql语句。
+2. GreenDao
+   * 属于ORM框架
+   * 为关系型数据库提供面向对象的接口
+   * 简化数据库操作
+   * 性能最高
+   * 强大API，涵盖关系和链接
+   * 内存消耗100kb大小
+3. 概念以及步骤
+   * 一个实体类对应一个表——创建实体类
+   * 一个Dao对应一个数据访问对象（某表的操作）
+   * DaoMaster——数据库连接对象
+   * DaoSession——由连接生成的会话——创建Dao、DaoMaster、DaoSession
+4. 使用
+   * 创建数据库会话
+   ```java
+   // 引入注解，写出属性后点Build——Make Project。
+    @Entity
+    public class GoodsModel implements Parcelable {
+        @Id(autoincrement = true)
+        private Long id;
+        @Index(unique = true)
+        private Integer goodsId;
+        private String name;
+        private String icon;
+        private String info;
+        private String type;
+   ```
+   ```java
+        public class MyApplication extends Application {
+
+        public static DaoSession mSession;
+
+        @Override
+        public void onCreate() {
+            super.onCreate();
+            initDb();
+        }
+
+        //连接数据库并创建会话
+        public void initDb () {
+            //1. 获取需要连接的数据库
+    //        获取SQLiteOpenHelper对象devOpenHelper
+            DaoMaster.DevOpenHelper devOpenHelper = new DaoMaster.DevOpenHelper(this, "imooc.db");
+    //        获取SQLiteDatabase
+            SQLiteDatabase db = devOpenHelper.getWritableDatabase();
+            // 2. 创建数据库链接
+    //        加密数据库
+    //        Database db = devOpenHelper.getEncryptedWritableDb("123");
+    //        创建DaoMaster实例
+    //        DaoMaster保存数据库对象（SQLiteDatabase）并管理特定模式的Dao类（而不是对象）。
+    //        它具有静态方法来创建表或将它们删除。
+    //        其内部类OpenHelper和DevOpenHelper是在SQLite数据库中创建模式的SQLiteOpenHelper实现。
+            DaoMaster daoMaster = new DaoMaster(db);
+            // 3. 创建数据库会话
+    //        管理特定模式的所有可用Dao对象
+            mSession = daoMaster.newSession();
+        }
+   ```
+   
