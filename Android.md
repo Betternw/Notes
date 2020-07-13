@@ -28,6 +28,9 @@
 * #### [RecyclerView](#27)
 * #### [Glide](#28)
 * #### [GreenDao](#29)
+* #### [极光推送](#30)
+* #### [WebView浏览器组件](#31)
+* #### [ButterKnife实现View注入](#32)
 ## <span id = "1">快捷键</span>
 alt+enter：错误纠正
 ## <span id = "2">第一章</span>
@@ -4138,4 +4141,467 @@ public class StudentDao {
             mSession = daoMaster.newSession();
         }
    ```
-   
+###  <span id = "30">极光推送</span>
+1. 推送：使应用程序即时收到由服务器端发起的通知，客户端接收并进行展示
+2. 实现推送的方式
+   * 客户端定时轮询
+   * 客户端与服务器建立长连接
+      * 短连接：数据交互连接，交互完成则关闭
+      * 客户端与服务器之间始终保持通信连接
+3. 推送实现原理：客户端与服务器建立长连接，服务器主动向客户端推送消息，客户端收到后进行展示
+4. 常用的推送平台——考虑推送到达率
+   * 谷歌GCM
+   * 极光推送（jPush）
+   * 友盟推送（UPush）
+   * 个推
+5. 集成极光推送
+   * 注册极光账号
+   * 创建应用并开通推送功能
+   * 集成SDK
+      * 下载sdk
+      * 添加jar、so、资源文件，
+      * 配置AndroidManifest
+      * 添加继承自BroadcastReceiver的类
+      * 激活jpush插件
+###  <span id = "31">WebView浏览器组件</span>
+1. WebView
+   * 一种ui组件
+   * 基于webakkitnei内核（Chromium）
+   * 可以用来展示网页并且可以和网页进行交互
+2. 网页组成： HTML CSS JS
+3. WebView常用方法
+   * 加载网页的四种方式
+      * loadUrl（String url）
+      * loadUrl(String url,Map<String,String> additionalHttpHeaders)
+      * loadData(String data,String mimeType,String encoding)
+      * loadDataWithBaseURL(String baseUrl,String data,String mimeType,String encoding,String historyUrl)
+    * 控制网页的前进和后退
+       * boolean canGoBack()
+       * boolean canGoForward()
+       * boolean canGoBackOrForward(int steps)
+       * void goBack()
+       * void goForward()
+       * void goBackOrForward(int steps)
+       * void clearHistory()
+    * 状态管理（在Activity结束的时候webView也结束，与Activity的生命周期做相同的处理）
+       * onPause()：通知内核暂停所有动作
+       * pauseTimers()
+       * on Resume()：激活为活跃状态
+       * resumeTimers()
+       * destory()：销毁webview
+4. Web常用类
+   * WebSettings：对webView配置和管理，比如控制网页缩放，jsp的代码运行等
+      * 控制js代码运行
+      ```java
+              WebSettings webSettings = mWebView.getSettings();
+              webSettings.setJavaScriptEnabled(true);
+      ```
+      * 控制缩放
+      ```java
+        //是否支持缩放
+        webSettings.setSupportZoom(true);
+        //设置内置缩放控件
+        webSettings.setBuiltInZoomControls(true);
+        //是否隐藏原生的缩放控件
+        webSettings.setDisplayZoomControls(true);
+      ```
+      * 控制对网页的缓存
+      ```java
+        //永远不使用网络只有本地缓存，没有本地缓存则不会加载
+       webSettings.setCacheMode(WebSettings.LOAD_CACHE_ONLY);
+        //只要本地有缓存，无论是否过期，都使用本地缓存，没有缓存才去加载网络
+        webSettings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
+        //默认，根据cache-control决定是否从网络获取
+       webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        //永不使用缓存，只从网络获取
+        webSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);
+      ```
+   * WebViewClient：处理网页加载时的各种回调通知
+      * 默认使用系统浏览器加载，传入参数就可以在本地app加载
+      * 常用方法
+      ```java
+      @Override
+            //进行资源请求时回调
+            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
+                Log.e("WebViewActivity","webview-》shouldInterceptRequest请求了(android5.0之上调用)url：" + request.getUrl().toString());
+                return super.shouldInterceptRequest(view, request);
+            }
+
+            @Override
+            //网页开始加载的时候回调
+            public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                super.onPageStarted(view, url, favicon);
+                Log.e("WebViewActivity","webview-》onPageStarted 网页开始进行加载url：" + url);
+            }
+
+            @Override
+            //加载网页之前回调
+            public void onLoadResource(WebView view, String url) {
+                super.onLoadResource(view, url);
+                Log.e("WebViewActivity","webview-》onLoadResource 网页开始加载资源url：" + url);
+            }
+
+            @Override
+            //网页加载完成时回调
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                Log.e("WebViewActivity","webview-》onPageFinished 网页已经加载完成url：" + url);
+            }
+      ```    
+   * WebChromeClient：辅助获取网页标题、对话框、进度等
+      * ```java
+            mWebView.setWebChromeClient(new WebChromeClient() {
+                @Override
+                //获取网页加载进度
+                public void onProgressChanged(WebView view, int newProgress) {
+                    super.onProgressChanged(view, newProgress);
+                    Log.e("webViewActivity", "newProgress:" + newProgress);
+                }
+
+                @Override
+                //获取网页标题
+                public void onReceivedTitle(WebView view, String title) {
+                    super.onReceivedTitle(view, title);
+                    Log.e("webViewActivity", "title:" + title);
+                }
+                     @Override
+            //在网页将要打开一个alert警告对话框的时候回调
+            public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
+                boolean res = super.onJsAlert(view, url, message, result);
+                res = true;
+                Log.e("webViewActivity", "onJsAlert - url : " + url + " - message : " + message + "  - res : " + res);
+                Toast.makeText(WebViewActivity.this, message, Toast.LENGTH_SHORT).show();
+                result.confirm();
+                return res;
+            }
+
+            @Override
+            //在网页将要打开一个confirm警告对话框的时候回调
+            public boolean onJsConfirm(WebView view, String url, String message, final JsResult result) {
+                boolean res = super.onJsConfirm(view, url, message, result);
+                res = true;
+                Log.e("webViewActivity", "onJsConfirm - url : " + url + " - message : " + message + "  - res : " + res);
+                AlertDialog.Builder builder = new AlertDialog.Builder(WebViewActivity.this);
+                builder.setMessage(message);
+                builder.setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        result.confirm();
+                    }
+                });
+
+                builder.setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        result.cancel();
+                    }
+                });
+                builder.create().show();
+                return res;
+            }
+
+            @Override
+            //在网页将要打开一个prompt警告对话框的时候回调
+            public boolean onJsPrompt(WebView view, String url, String message, String defaultValue, final JsPromptResult result) {
+                boolean res = super.onJsPrompt(view, url, message, defaultValue, result);
+                res = true;
+                Log.e("webViewActivity", "onJsConfirm - url : " + url + " - message : " + message + " - defaultValue : " + defaultValue + "  - res : " + res);
+                AlertDialog.Builder builder = new AlertDialog.Builder(WebViewActivity.this);
+                builder.setMessage(message);
+                builder.setPositiveButton("确定", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        result.confirm("这是点击了确定按钮之后的输入框内容");
+                    }
+                });
+
+                builder.setNegativeButton("取消", new DialogInterface.OnClickListener() {
+                    @Override
+                    public void onClick(DialogInterface dialogInterface, int i) {
+                        result.cancel();
+                    }
+                });
+                builder.create().show();
+                return res;
+            }
+        ```
+5. Android端调用JS代码
+   * loadUrl('javascript:方法名（参数...)'),但是无法获取返回值
+   ```java
+       public void onShowAlertFromloadUrl (View v) {
+        mWebView.loadUrl("javascript:showAlert()");
+      }
+   ```
+   * evaluateJavascript('javascript:方法名（参数...)',ValueCallback<String> resultCallback）
+   ```java
+       public void onSumFromEVJS (View v) {
+        mWebView.evaluateJavascript("javascript:sum(2, 3)", new ValueCallback<String>() {
+            @Override
+            public void onReceiveValue(String s) {
+                Toast.makeText(WebViewActivity.this, "evaluateJavascript - " + s, Toast.LENGTH_SHORT).show();
+            }
+        });
+       }
+   ```
+6. JS调用Android代码
+   * 拦截js请求的回调方法
+   ```java
+    //js协议内容需要设置为Android
+                Uri uri = Uri.parse(url);
+                if ("android".equals(uri.getScheme())) {
+                    String functionName = uri.getAuthority();
+                    if ("print".equals(functionName)) {
+                        String msg = uri.getQueryParameter("msg");
+                        print(msg);
+                        return true;
+                    }
+                }
+   ```
+   * 对象映射
+   ```java
+    mWebView.addJavascriptInterface(new DemoJsObject(), "android");
+   ```
+   ```java
+    public class DemoJsObject {
+
+        @JavascriptInterface
+        public String print (String msg) {
+            Log.e("DemoJsObject", "msg ：" + msg);
+            return "这是android的返回值";
+        }
+    }
+
+   ```
+###  <span id = "32">BtterKnife实现View注入</span>
+1. 注入View、资源和事件
+```java
+
+    //注入View
+    @BindView(R.id.id_tv)
+    //不能用private和static进行修饰，默认public        
+     TextView mTv;
+    @BindView(R.id.id_btn1)
+    Button mBtn1;
+    @BindView(R.id.id_btn2)
+    Button mBtn2;
+
+    // 注入资源
+    @BindString(R.string.hello_world)
+    String str;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState)
+    {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        ButterKnife.bind(this);
+
+        mTv.setText(str);
+        mBtn1.setText("Hello");
+        mBtn2.setText("Imooc");
+
+    }
+
+    //注入事件
+    @OnClick({R.id.id_btn1, R.id.id_btn2})
+    public void btnClick(View view)
+    {
+        switch (view.getId())
+        {
+            case R.id.id_btn1:
+                Toast.makeText(this, "Btn1 Clicked!", Toast.LENGTH_SHORT).show();
+                break;
+            case R.id.id_btn2:
+                Toast.makeText(this, "Btn2 Clicked!", Toast.LENGTH_SHORT).show();
+                break;
+        }
+
+    }
+```
+2.   注入ListView
+```java
+public class CategoryAdapter extends ArrayAdapter<String>
+{
+    private LayoutInflater mInflater;
+
+    public CategoryAdapter(Context context, List<String> objects)
+    {
+        super(context, -1, objects);
+
+        mInflater = LayoutInflater.from(context);
+    }
+
+    @Override
+    public View getView(int position, View convertView, ViewGroup parent)
+    {
+        ViewHolder holder = null;
+        if (convertView == null)
+        {
+            convertView = mInflater.inflate(R.layout.item_category, parent, false);
+            holder = new ViewHolder(convertView);
+            convertView.setTag(holder);
+        } else
+        {
+            holder = (ViewHolder) convertView.getTag();
+        }
+
+        holder.mTextView.setText(getItem(position));
+        return convertView;
+    }
+
+    static class ViewHolder
+    {
+        @BindView(R.id.id_title_tv)
+        TextView mTextView;
+
+        public ViewHolder(View view)
+        {
+
+            ButterKnife.bind(this, view);
+        }
+
+    }
+```
+
+```java
+public class CategoryActivity extends AppCompatActivity
+{
+
+    @BindView(R.id.id_listview)
+    ListView mListView;
+
+    //listview的数据
+    private List<String> mData = new ArrayList<>(Arrays.asList("Simple Use", "RecyclerView Use"));
+
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState)
+    {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_category);
+
+        ButterKnife.bind(this);
+
+        mListView.setAdapter(new CategoryAdapter(this, mData));
+
+    }
+
+    @OnItemClick(R.id.id_listview)
+    public void itemClicked(int position)
+    {
+        Toast(...);
+    }
+
+```
+3. 注入RecuclerView
+```java
+  @OnItemClick(R.id.id_listview)
+    public void itemClicked(int position)
+    {
+        Intent intent = null;
+        switch (position)
+        {
+            case 0:
+                intent = new Intent(this, MainActivity.class);
+                break;
+            case 1:
+                intent = new Intent(this, RecyclerViewActivity.class);
+                break;
+        }
+        if (intent != null)
+            startActivity(intent);
+    }
+```
+```java
+public class RecyclerViewActivity extends AppCompatActivity
+{
+    @BindView(R.id.id_recyclerview)
+    RecyclerView mRecyclerView;
+
+    private List<String> mDatas = new ArrayList<>(Arrays.asList("Simple Use", "RecyclerView Use"));
+
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState)
+    {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_recycler_view);
+
+        ButterKnife.bind(this);
+
+        mRecyclerView.setAdapter(new RvAdapter(this, mDatas));
+        mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu)
+    {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_recycler_view, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item)
+    {
+        // Handle action bar item clicks here. The action bar will
+        // automatically handle clicks on the Home/Up button, so long
+        // as you specify a parent activity in AndroidManifest.xml.
+        int id = item.getItemId();
+
+        //noinspection SimplifiableIfStatement
+        if (id == R.id.action_settings)
+        {
+            return true;
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+  }
+```
+```java
+public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
+{
+    private LayoutInflater mInflater;
+    private List<String> mDatas;
+
+    public RvAdapter(Context context, List<String> datas)
+    {
+        mInflater = LayoutInflater.from(context);
+        mDatas = datas;
+    }
+
+    @Override
+    public ViewHolder onCreateViewHolder(ViewGroup viewGroup, int i)
+    {
+        return new RvAdapter.ViewHolder(mInflater.inflate(R.layout.item_category, viewGroup, false));
+    }
+
+    @Override
+    public void onBindViewHolder(ViewHolder viewHolder, int i)
+    {
+        viewHolder.mTextView.setText(mDatas.get(i));
+    }
+
+    @Override
+    public int getItemCount()
+    {
+        return mDatas.size();
+    }
+
+    static class ViewHolder extends RecyclerView.ViewHolder
+    {
+        @BindView(R.id.id_title_tv)
+        TextView mTextView;
+
+        public ViewHolder(View itemView)
+        {
+            super(itemView);
+            ButterKnife.bind(this, itemView);
+        }
+    }
+```
+4. ButterKnife Zelezny插件
+   * 导入后，右键 Generate ButterKnife Injections，可以自动声明控件和onclick方法
+   * 导入后，右键 Generate ButterKnife Injections，可以自动声明viewholder方法
