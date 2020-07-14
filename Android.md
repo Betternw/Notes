@@ -31,6 +31,11 @@
 * #### [极光推送](#30)
 * #### [WebView浏览器组件](#31)
 * #### [ButterKnife实现View注入](#32)
+### * [高级应用](#33)
+* #### [Service](#34)
+* #### [ALDL实现远程服务的通信](#35)
+* #### [ContentProvider](#36)
+* #### [Socket&Https通信](#37)
 ## <span id = "1">快捷键</span>
 alt+enter：错误纠正
 ## <span id = "2">第一章</span>
@@ -4605,3 +4610,167 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
 4. ButterKnife Zelezny插件
    * 导入后，右键 Generate ButterKnife Injections，可以自动声明控件和onclick方法
    * 导入后，右键 Generate ButterKnife Injections，可以自动声明viewholder方法
+## <span id = "33">高级应用</span>
+###  <span id = "34">Service</span>
+1. 相当于没有界面的Activity，四大组件之一。
+2. 用于在后台处理耗时操作，比如下载、音乐播放
+3. 不受Activity生命周期影响
+4. 生命周期
+   * onCreate()
+   * onStartCommand():如果服务已经创建了，后续重复启动，操作的都是同一个服务，不会再重新创建了，除非你先销毁它
+   ```java
+       public void operate(View v){
+        switch (v.getId()){
+            case R.id.start:
+                //启动服务:创建-->启动-->销毁
+                //如果服务已经创建了，后续重复启动，操作的都是同一个服务，不会再重新创建了，除非你先销毁它
+                Intent it1 = new Intent(this,MyService.class);
+                startService(it1);
+                break;
+   ```
+   * onBind():绑定.先创建再绑定，但是不会开始运行。先解绑再停止服务。会随着Actiity结束而结束。
+   ```java
+       //IBinder
+    //ServicerConnection:用于绑定客户端和Service
+    //进度监控
+    private ServiceConnection conn = new ServiceConnection() {
+        //当客户端正常连接着服务时，执行服务的绑定操作会被调用
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+        }
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+
+        }
+    };
+   ```
+   ```java
+   case R.id.bind:
+                //绑定服务：最大的 作用是用来实现对Service执行的任务进行进度监控
+                //如果服务不存在： onCreate-->onBind-->onUnbind-->onDestory
+                // （此时服务没有再后台运行，并且它会随着Activity的摧毁而解绑并销毁）
+                //服务已经存在：那么bindService方法只能使onBind方法被调用，而unbindService方法只能使onUnbind被调用
+                Intent it3 = new Intent(this,MyService.class);
+                bindService(it3, conn,BIND_AUTO_CREATE);
+   ```
+   * onUnbind()：解绑。
+      * 如果服务不存在： onCreate-->onBind-->onUnbind-->onDestory。
+      * 服务已经存在：那么bindService方法只能使onBind方法被调用，而unbindService方法只能使onUnbind被调用
+   ```java
+   case R.id.unbind:
+                //解绑服务
+                unbindService(conn);
+                break;
+   ```
+   * onDestory()
+   ```java
+               case R.id.stop:
+                Intent it2 = new Intent(this,MyService.class);
+                stopService(it2);
+                break;
+   ```
+   * 启动操作:onCreate()--onStartCommand()--服务运行--onDestory()--服务停止。进行执行确实要执行的耗时操作
+   * 绑定操作：onCreate()--onBind()--绑定--onUnbind()--onDestory()--服务停止。会随着Activity的结束而结束。因此进行进度监控
+5. 绑定操作的作用——Activity对后台service执行的任务进行进度监控
+   * IBinder：用于远程操作对象的一个基本接口
+   ```java
+   //1. startService(本类对象)
+    public class MyService extends Service {
+        public MyService() {
+        }
+
+        private int i;
+        //2. 创建子线程
+        @Override
+        public void onCreate() {
+            super.onCreate();
+            Log.e("TAG","服务创建了");
+            //开启一个线程（从1数到100），用于模拟耗时的任务
+            new Thread(){
+                @Override
+                public void run() {
+                    super.run();
+                    try {
+                        for (i = 1; i <= 100; i++) {
+                            sleep(1000);
+                        }
+                    }catch (Exception e){
+                        e.printStackTrace();
+                    }
+                }
+            }.start();
+        }
+
+        //启动
+        @Override
+        public int onStartCommand(Intent intent, int flags, int startId) {
+            Log.e("TAG","服务启动了");
+            return super.onStartCommand(intent, flags, startId);
+        }
+
+        //3. 绑定
+        //IBinder：在android中用于远程操作对象的一个基本接口
+        @Override
+        public IBinder onBind(Intent intent) {
+            Log.e("TAG","服务绑定了");
+            //实现IBinder类所有方法的空实现，但是可以定义自己的方法，从而实现自己想要的方法
+            return new MyBinder();
+        }
+
+        //对于onBind方法而言，要求返回IBinder对象
+        //实际上，我们会自己定义一个内部类，继承Binder类
+
+        //4. 定义MyBinder
+        class MyBinder extends Binder{
+            //定义自己需要的方法（实现进度监控）
+            public int getProcess(){
+                return i;
+            }
+        }
+   ```
+   * ServicerConnection
+   ```java
+    //IBinder
+    //5. ServicerConnection:用于绑定客户端和Service
+    //进度监控
+    //Ibinder返回值会传入这个方法
+    private ServiceConnection conn = new ServiceConnection() {
+        //当客户端正常连接着服务时，执行服务的绑定操作会被调用
+        @Override
+        public void onServiceConnected(ComponentName componentName, IBinder iBinder) {
+            Log.e("TAG","慕课");
+
+            MyService.MyBinder mb = (MyService.MyBinder) iBinder;
+            int step = mb.getProcess();
+            Log.e("TAG","当前进度是：" + step);
+
+        }
+
+        //当客户端和服务的连接丢失了
+        @Override
+        public void onServiceDisconnected(ComponentName componentName) {
+
+        }
+      };
+   ```
+###  <span id = "35">ALDL实现远程服务的通信</span>
+1. 安卓接口定义语言：进程间的通信接口
+###  <span id = "36">ContentProvider</span>
+1. 四大组件之一——为存储和获取数据提供统一的接口。也就是将自身通过接口将数据提供给外部。
+2. 实现不同的应用程序之间共享数据（比如微信可以访问联系人数据）
+3. 将数据存表，然后以操作数据库的形式去操作数据。
+4. ContentProvider配置
+   * 自定义类继承于CP，实现要求的方法
+   * 配置标签、属性、指定当前内容提供者的url标识且唯一
+5. ContentResolver
+   * 用来做数据访问，访问其他数据的手段
+   * CP的方法和CS的方法一样，参数也相同。通过url可以调用到对面的同名方法
+###  <span id = "37">Socket&Https通信</span>
+1. Socket：
+   * 通过，ip定位电脑，端口号定位程序。
+   * UDP：封装发送。不安全的通信协议。
+   * TCP：持续性输送消息。流。
+2. Http和Socket的区别
+   * Http用于应用层，无状态协议
+   * Socket用于传输层：可以自己定义协议，灵活性更高，实现Client和Server的通信。
+3. https：更加安全
