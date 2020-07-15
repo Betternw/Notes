@@ -4781,6 +4781,40 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
 3. 核心model：路由架构、HTTP请求、通用UI、重复处理、业务相关的东西。
 4. 业务model：只有第三方库、项目特有的个别功能、相应一类业务的特殊UI、相应一类业务的通用逻辑和特殊处理
 5. 创建model：mall-library，存储自己的库等。业务无关的东西。
-6. 业务模块——全局控制类——配置管理器
-
-                      ——存储配置的容器
+6. 全局配置搭建
+* 配置管理器（mall.library/global/Configurator）
+   * 获取全局的存储容器变量
+   * 访问服务器端API设置
+   * 结束配置——进行一些回收动作，检查配置是否完成；配置完成后得到数据
+* 存储配置的容器（mall.library/utilstorage/MemoryStore)
+   * 以内存级别存储，当被序列化到xml或者数据库中后，在配置或者远程网络变化时也能及时更改响应
+   * 线程安全的单例模式，内部类或者双重校验锁
+   * 以HashMap的数据结构存储数据
+* 枚举类的类型存储数据变量（mall.library/global/GlobalKeys）
+* 访问配置器的类（mall.library/global/Mall）
+   * 获取MemoryStore，全局context，返回值Configurator（配置）
+* 与app module进行连接（创建app.MallEXampleApp）
+   * 通过mall.library/global/Mall类的init方法进行访问全局配置中的方法或变量
+7. 网络框架搭建
+* 将Retrofit封装成一个通用的网络请求库
+   * 导入依赖“com.squareup.retrofit2:retrofit:2.9.0”
+   * 创建枚举类，存放HTTP方法（mall.library/net/HttpMethod）
+   * 创建Service接口，完成请求的映射（mall.library/net/RestService），对应RestfulAPI。写相应的get、post、delete、upload等方法
+   * 创建Retrofit的各个实例的类。（mall.library/net/RestCreator）。
+      * 创建OkHttpHolder用到了建造者模式：将一个复杂对象的构建与它的表示分离，使同样的构建过程可以创建不同的表示。
+      * 为了解析返回的字符串，使用了简单工厂模式
+* 实现具体的请求
+   * 在所有依赖mall-library的app中对外暴露直接使用的客户端，（mall.library/net/RestClient），————构建每一个restful请求，对API请求进行回应
+   * 建造者模式构建参数和回调。Builder是静态内部类，独立出一个类。（mall.library/net/RestClientBuilder），构建RestClient并初始化参数和回调，辅助RestClient。
+      * WeakHashMap存储请求参数——基于弱引用，随时可能被删除，在缓存时由于内存有限不能缓存所有对象，因此需要一定的删除机制淘汰掉一些对象。
+      * 建立具体处理逻辑的回调类，作为参数传递给RestClient中的方法调用。（mall.library/net/callback/RequestCallBacks）
+   * 建立（mall.library/callback）包，存放回调方法。
+* 网络加载
+   * 加载框
+      * 导入 api 'com.wang.avi:library:2.1.3'库
+      * 新建mall.library/ui/loader包，表示加载框，创建枚举类，ui/loader/LoaderStyles。样式的选择是通过加载类的名字以反射的形式加载实例，再以view渲染的方式进行展现
+      * 处理loader：mall.library/ui/loader/MallLoader。本身loader是以view的形式进行展现的，需要实例化再展现。所以应该以dialog容器的形式承载loader 以弹出框的形式加载出，当网络请求加载结束后再cancel。
+         * 获取屏幕宽高：导入工具类com.blankj:utilcode:1.29.0
+         * 设置加载方法
+      * 在RestClientBuilder、RestClient、RequestCallBacks中创建loader变量和初始化器
+8. UI搭建
