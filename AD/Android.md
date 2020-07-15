@@ -36,6 +36,7 @@
 * #### [ALDL实现远程服务的通信](#35)
 * #### [ContentProvider](#36)
 * #### [Socket&Https通信](#37)
+### * [项目](#38)
 ## <span id = "1">快捷键</span>
 alt+enter：错误纠正
 ## <span id = "2">第一章</span>
@@ -4774,3 +4775,12 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
    * Http用于应用层，无状态协议
    * Socket用于传输层：可以自己定义协议，灵活性更高，实现Client和Server的通信。
 3. https：更加安全
+###  <span id = "38">项目</span>
+1. 模块化，用model作为基本单元
+2. 全局唯一配置入口，单Activity，以Fragment作为基本容器
+3. 核心model：路由架构、HTTP请求、通用UI、重复处理、业务相关的东西。
+4. 业务model：只有第三方库、项目特有的个别功能、相应一类业务的特殊UI、相应一类业务的通用逻辑和特殊处理
+5. 创建model：mall-library，存储自己的库等。业务无关的东西。
+6. 业务模块——全局控制类——配置管理器
+
+                      ——存储配置的容器
