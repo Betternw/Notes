@@ -4775,7 +4775,7 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
    * Http用于应用层，无状态协议
    * Socket用于传输层：可以自己定义协议，灵活性更高，实现Client和Server的通信。
 3. https：更加安全
-###  <span id = "38">项目</span>
+##  <span id = "38">项目</span>
 1. 模块化，用model作为基本单元
 2. 全局唯一配置入口，单Activity，以Fragment作为基本容器
 3. 核心model：路由架构、HTTP请求、通用UI、重复处理、业务相关的东西。
@@ -4818,3 +4818,37 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
          * 设置加载方法
       * 在RestClientBuilder、RestClient、RequestCallBacks中创建loader变量和初始化器
 8. UI搭建
+   * 基类Fragment实现
+      * 单Activity==controcler
+      * 导入Fragment包
+      * 新建Fragment包。
+      * mall.library/Fragment/BaseFragment，抽象类不实例化。
+      * mall.library/Fragment/MallFragment,继承自BaseFragment，编写延迟时间等一些在底部实现的封装方法
+      * 建立承载容器Activity：mall.library/activities/ProxyActivity。初始化容器并继承代理方法。
+   * 电商主页
+      * 封装底部Tab基类——mall.library/Fragment/bottom
+         * mall.library/Fragment/bottom/BaseBottonFragment：基类，不需要初始化，抽象类。相当于底部容器（底部所有）。将tab和fragment封装到每一个item中，进行点击事件的处理onBindView，比如颜色的切换，图标的改变等
+         * mall.library/Fragment/bottom/BaseItemFragment：实现基本功能。每一页tab的Fragment（每个tab点击的功能，和对应的每个tab点击后的Fragment）
+         * mall.library/Fragment/bottom/BottomTabBean：容纳每个tab中承载的Fragment（切换时的每个tab的属性，比如名字和图标）
+         * mall.library/Fragment/bottomItemBuilder：构建类，返回每个item（属性+功能）
+    * 实现底部的Tab类
+         * app/fragment/MallMainFragment:继承自BaseBottomFragment()，
+            * 初始化实现，添加需要的主界面和tab对，框架会自动判断并渲染出正确的主界面。图标使用font aawesome中的图标，直接fa引用，并设置每个tab的名字。
+            * 将字体库构造到constructor中。
+            * 创建每个item对应的实例化Fragment。在每个fragment中设置功能就可以实现具体每页的功能。
+9. 主页实现
+   * 首页框架
+      * 导入RecyclerView
+   * 轮播图
+      * 新建banner 初始化轮播图相关
+      * 创建holder：新建glide对象，将缓存策略、动画等放入glide对象，将data/url插入到imageView中进行加载，让image显示网络图片
+      * 创建creator：设置具体轮播，比如轮播时间和轮播样式等
+   * recyler的创建抽象几何
+      * 创建mall.library/ui/recyler
+      * mall.library/ui/recyler/ItemType：枚举。每个item的ui类型。比如只有文字、只有图片、轮播图等
+      * mall.library/ui/recyler/MultipleFields ：枚举类，数据加载要解析的字段与json转换的字段一一对应
+      * mall.library/ui/recyler/MultipleItemEntity：存储MultipleFields的字段的数据并做相应的转换。通过json返回值类型放入itemType，放入MultipleFields的itemType中的属性。
+      * mall.library/ui/recyler/MultipleItemEntityBuilder：构造器，item和itemType的连接工作
+      * mall.library/ui/recyler/MultipleRecyclerAdapter和 MultipleViewHolder 。将数据映射到相应的view中。经过adapter的处理后，在view看来所有的数据映射过来都是一样的。
+         * getSpanSize方法：将数据转换到MultipleItemEntity中通过方法获取到每一行的MultipleItemEntity，获取到spanSize，将该值又转换到getSpansize，判断一行能塞几个值——数据驱动ui通过
+         * convert：通过itemtype方法获取布局的类型进行渲染——数据驱动UI
