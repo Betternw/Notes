@@ -4859,17 +4859,20 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
          * mall.library/ui/recyler/DataConverter：数据转换层，抽象方法
          * app/fragment/index/IndexDataConverter：继承DataConverter，通过json object将数据取出，放入adapter对象中，RecyclerView加载adapter。
 10. 商品分类页面
-* 右边内容
-   * app/fragment/sort/content/ContentFragment。点击list，通过contentFragment的静态方法newInstance（），将contentId传入，根据id得到content列表
-   * app/fragment/sort/content/SectionDataConverter：json数据转换，用SectionEntity存储数据，不用之前通用的Entity，因为content部分是section组成的。
-      * app/fragment/sort/content/SectionContentItemEntity ：存储section中的商品的数据类型
-      * app/fragment/sort/content/SectionBean：存储一整个section的数据
-      * 将SectionBean传入SectionDataConverter中，取出json数据并转换成对象
-   * app/fragment/sort/content/SectionAdapter：将数据映射（转换）到UI上
-   * app/fragment/sort/content/ContentFragment：初始化数据和view进行展示
-* 左边分类栏
-   * app/fragment/sort/list/VerticalListFragment：初始化UI后加载数据
-   * app/fragment/sort/list/VerticalListDataConverter：数据转换
-* list和content联动
-   * app/fragment/sort/list/SortRecyclerAdapter：通用adapter类，通过layout和枚举类取出每个空间的id，设置点击事件，
-   * app/fragment/sort/SortFragment：父类Fragment，加载布局进行初始化
+    * 右边内容
+       * app/fragment/sort/content/ContentFragment。点击list，通过contentFragment的静态方法newInstance（），将contentId传入，根据id得到content列表
+       * app/fragment/sort/content/SectionDataConverter：json数据转换，用SectionEntity存储数据，不用之前通用的Entity，因为content部分是section组成的。
+          * app/fragment/sort/content/SectionContentItemEntity ：存储section中的商品的数据类型
+          * app/fragment/sort/content/SectionBean：存储一整个section的数据
+          * 将SectionBean传入SectionDataConverter中，取出json数据并转换成对象
+       * app/fragment/sort/content/SectionAdapter：将数据映射（转换）到UI上
+       * app/fragment/sort/content/ContentFragment：初始化数据和view进行展示
+    * 左边分类栏
+       * app/fragment/sort/list/VerticalListFragment：初始化UI后加载数据
+       * app/fragment/sort/list/VerticalListDataConverter：数据转换
+    * list和content联动
+       * app/fragment/sort/list/SortRecyclerAdapter：通用adapter类，通过layout和枚举类取出每个空间的id，设置点击事件，
+       * app/fragment/sort/SortFragment：父类Fragment，加载布局进行初始化
+11. 购物车
+   * ContrainLayout布局
+   * app/fragment/cart/ShopCartFragment：
