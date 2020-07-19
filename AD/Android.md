@@ -4874,5 +4874,28 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
        * app/fragment/sort/list/SortRecyclerAdapter：通用adapter类，通过layout和枚举类取出每个空间的id，设置点击事件，
        * app/fragment/sort/SortFragment：父类Fragment，加载布局进行初始化
 11. 购物车
-   * ContrainLayout布局
-   * app/fragment/cart/ShopCartFragment：
+   * ContrainLayout布局实现购物车界面和item的布局
+   * app/fragment/cart/ShopCartFragment：初始化控件、加载数据、响应商品增减
+   * UI渲染
+      * app/fragment/cart/ShopCartDataConverter：数据转换，获取数据对象
+      * app/fragment/cart/ShopCartAdapter：将数据放入adapter，与UI进行交互渲染
+   * 加减商品
+      * adapter中添加加减事件，被点击后数目和价格的变化
+      * ShopCartFragment获取adapter和总价
+      * item价格变化改变外部fragment的总价：app/fragment/cart/ICartItemPriceListener接口，adapter中在加减方法中调用接口，将总价作为参数传递，fragment类中的adapter对象可以接收到变化的总价
+      * 每次加减都请求服务器，传递id和count
+   * 全选和清空（定义方法后要在bindView进行绑定）
+      * 定义点击接口，选择不同的按钮实现不同的事件
+      * 全选
+        * 使用tag进行标记是否全选
+        * 全选有颜色的更改，设置取消全选的下标范围
+        * 没有全选有颜色的更改，设置全选的下标范围
+      * 清空
+        * 清空adapter数据
+        * 清空改变
+        * 通知用户购物车清空了
+      * 删除选中条目
+        * 将需要删除的item记录
+        * adapter中的data中统一删除
+        * notify通知recylerView发生了删除
+      * ViewStub：随时可能出现的控件，会替代当前的layout。用作提醒购物车空需要添加。
