@@ -4899,3 +4899,19 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
         * adapter中的data中统一删除
         * notify通知recylerView发生了删除
       * ViewStub：随时可能出现的控件，会替代当前的layout。用作提醒购物车空需要添加。
+12. 商品详情
+    * app/fragment/details/GoodsDetailFragment
+      * 获取goodsID
+      * 通过API获取相应商品信息
+      * 轮播图的初始化 传入json对象
+      * 加载商品具体信息
+      * 初始化TabLayout和ViewPager，并关联TabLayout和ViewPager
+      * 上下粘性滑动
+      * 添加购物车操作：加入购物车动作进行了restful API请求，向服务器请求一次API，把加购物车的动作通知服务器，得到服务器返回结果后，将结果体现在购物车上
+    * app/fragment/index/IndexItemClickListener:点击事件的重写。点击首页的商品跳转到商品详情中。
+    * app/fragment/details/GoodsInfoFragment：商品详细信息。将json数据赋给具体的对象
+    * app/fragment/details/TabPagerAdapter：ViewPager的adapter。滑动到pager才加载数据。取出json数据放入对象中，做位置处理。
+    * app/fragment/details/ImageFragment：图片的显示放在另外的Fragment中处理，实现解耦。使用RecyclerView实现
+    * app/fragment/details/DetailImageAdapter：RecyclerView的adapter实现
+   
+     
