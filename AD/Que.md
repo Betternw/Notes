@@ -190,3 +190,7 @@ Activity B：onDestroy
 * ALDL服务
 46. 显示Intent与隐式Intent的区别
 * 明确指出了目标组件名称的Intent，我们称之为“显式Intent” 没有明确指出目标组件名称的Intent，则称之为“隐式 Intent”。
+47. Kotlin 特性，和 Java 相比有什么不同的地方?
+   * 能直接与Java相互调用
+   * 支持高阶函数
+   * 语言层面解决空指针问题
