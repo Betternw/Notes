@@ -44,6 +44,11 @@
     * 如果要操作少量的数据用 String。
     * 单线程操作字符串缓冲区下操作大量数据用 StringBuilder。
     * 多线程操作字符串缓冲区下操作大量数据用 StringBuffer。
+    * "+"和"append"
+      * 每一次 + 之前 都会new 一个StringBuilder对象，然后用append
+      * 一般情况进行字符串拼接用+就可以，系统内部会进行优化，但是如果是循环拼接，则需要用StringBuilder的append来实现
+      * 因为如果是循环拼接，那么系统会在循环体内部创建StringBUilder,这样会造成空间浪费；而用StringBuilder进行显示拼接时，可以定义在外面，减少内存的消耗
+    * StringBuffer和StringBuilder都继承自AbstractStringBuilder这个类，而AbstractStringBuilder和String都继承自Object这个类
 11. 什么是内部类？内部类的作用。
     * 内部类提供了更好的封装，除了该外围类，其他类都不能访问。
     * 在单个外围类中，可以让多个内部类以不同的方式实现同一个接口，或者继承同一个类。

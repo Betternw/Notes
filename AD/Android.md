@@ -4803,6 +4803,7 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
    * 创建Service接口，完成请求的映射（mall.library/net/RestService），对应RestfulAPI。写相应的get、post、delete、upload等方法
    * 创建Retrofit的各个实例的类。（mall.library/net/RestCreator）。
       * 创建OkHttpHolder用到了建造者模式：将一个复杂对象的构建与它的表示分离，使同样的构建过程可以创建不同的表示。
+      * 使用多个简单的对象一步一步构建成一个复杂的对象:
       * 为了解析返回的字符串，使用了简单工厂模式
 * 实现具体的请求
    * 在所有依赖mall-library的app中对外暴露直接使用的客户端，（mall.library/net/RestClient），————构建每一个restful请求，对API请求进行回应
