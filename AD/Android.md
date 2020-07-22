@@ -4378,7 +4378,8 @@ public class StudentDao {
     }
 
    ```
-###  <span id = "32">BtterKnife实现View注入</span>
+###  <span id = "32">ButterKnife实现View注入</span>
+* 对一个成员变量使用@BindView注解，并传入一个View ID， ButterKnife 就能够帮你找到对应的View，并自动的进行转换（将View转换为特定的子类）
 1. 注入View、资源和事件
 ```java
 
