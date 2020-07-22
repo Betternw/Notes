@@ -4779,7 +4779,7 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
 ##  <span id = "38">项目</span>
 1. 模块化，用model作为基本单元
 2. 全局唯一配置入口，单Activity，以Fragment作为基本容器
-3. 核心model：路由架构、HTTP请求、通用UI、重复处理、业务相关的东西。
+3. 核心model：路由架构、HTTP请求、通用UI、重复处理（ui绑定rv的处理网络请求的回调） 、业务相关的东西。
 4. 业务model：只有第三方库、项目特有的个别功能、相应一类业务的特殊UI、相应一类业务的通用逻辑和特殊处理
 5. 创建model：mall-library，存储自己的库等。业务无关的东西。
 6. 全局配置搭建
@@ -4915,5 +4915,8 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
     * app/fragment/details/TabPagerAdapter：ViewPager的adapter。滑动到pager才加载数据。取出json数据放入对象中，做位置处理。
     * app/fragment/details/ImageFragment：图片的显示放在另外的Fragment中处理，实现解耦。使用RecyclerView实现
     * app/fragment/details/DetailImageAdapter：RecyclerView的adapter实现
+13. 项目总结
+   * 首页展示前，整个Ａｃｔｉｖｉｔｙ作为Ｆｒａｇｍｅｎｔ的调度站，负责Ｆｒａｇｍｅｎｔ的跳转和信息传递。这样的好处是，避免跳转流程复杂，导致自己开发时候很晕。一般Ｆｒａｇｍｅｎｔ的跳转需要Ａｐｐ的当前状态，用户的当前状态，通过这两状态去决定下一个Ｆｒａｇｍｅｎｔ是什么。
+   * 
    
      

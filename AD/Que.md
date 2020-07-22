@@ -194,3 +194,20 @@ Activity B：onDestroy
    * 能直接与Java相互调用
    * 支持高阶函数
    * 语言层面解决空指针问题
+48. activity的四种状态：running paused stopped  killed
+49. Fragment加载到activity（加载进来才能启动）的两种方式：添加到布局文件中，作为xml文件；Fragmentmanager和Fragmentranscation然后提交commit方法
+50. viewpager实现页面滑动
+51. Fragment通信：在frag中调用activ的方法——get acativity; 在activity中调用fragment的方法：接口回调；在frag中调用frag：findfragmentByid
+52. service：运行在主线程中，不能做耗时操作。
+53. service和thread区别；————service运行在主线程中，不能运行耗时操作，是执行在后台不依赖于activity的，与是否耗时没有关系。，与activity通信通过async。————thread是子线程，可以运行耗时操作。
+54. 广播：应用程序之间传输信息，发送的内容是intent，intent携带数据；同一个app之间不同组件的消息通信、不同app之间的组件的相互通信；普通广播、系统广播、本地广播（只在app内传播）；静态注册：注册完成后一直运行，动态注册：跟随activity的生命周期。内部实现机制：binder机制
+55. 启动service的方式：startservice；bindservice（与activity进行绑定）
+56. handler：子线程的操作通过handler传递给主线程；使用方法：post（runnable）、sendmessage（message）；内存泄露：非静态内部类引用了外部类的引用。handler没有被释放，持有的引用没有必要释放，会内存释放——设置为静态内部类，在类内持有外部类的弱引用（弱引用也是用来描述非必需对象的，当JVM进行垃圾回收时，无论内存是否充足，都会回收被弱引用关联的对象）
+57. asyncTask：封装了线程池和handler，执行异步任务，方便的在UI线程和工作线程进行切换；内存泄露：和handler的原因相同；生命周期：在activity的destroy中调用cancel方法才行，否则会提前崩溃。
+58. View的绘制
+   * View树的绘制流程：measure（是否需要计算视图大小）——layout（是否需要视图位置）——draw（是否需要重绘）
+   * measure：树的递归。从上到下有序遍历。根据父容器对子容器的测量规格的参数，获取子容器的长宽高，并返回父容器，然后进行统一的测量。
+59. listview——动态滚动展示view
+   * 适配器模式：数据驱动UI，根据数据绘制UI
+   * recylerBin：内部类。屏幕可见放在内存中，其余放在recylerBin
+   * 优化：convertview重用（通过缓存convertView,这种利用缓存contentView的方式可以判断如果缓存中不存在View才创建View，如果已经存在可以利用缓存中的View）/viewholder（循环利用itemview。第一次加载item后，放入到内存中，下一次再加载的时候直接填充数据，不用再重新加载view。也就是不断地复用，只是更改了数据。）
