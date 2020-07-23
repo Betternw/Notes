@@ -204,10 +204,12 @@ Activity B：onDestroy
 55. 启动service的方式：startservice；bindservice（与activity进行绑定）
 56. handler：子线程的操作通过handler传递给主线程；使用方法：post（runnable）、sendmessage（message）；内存泄露：非静态内部类引用了外部类的引用。handler没有被释放，持有的引用没有必要释放，会内存释放——设置为静态内部类，在类内持有外部类的弱引用（弱引用也是用来描述非必需对象的，当JVM进行垃圾回收时，无论内存是否充足，都会回收被弱引用关联的对象）
 57. asyncTask：封装了线程池和handler，执行异步任务，方便的在UI线程和工作线程进行切换；内存泄露：和handler的原因相同；生命周期：在activity的destroy中调用cancel方法才行，否则会提前崩溃。
-58. View的绘制
+58. 自定义View的绘制
    * View树的绘制流程：measure（是否需要计算视图大小）——layout（是否需要视图位置）——draw（是否需要重绘）
    * measure：树的递归。从上到下有序遍历。根据父容器对子容器的测量规格的参数，获取子容器的长宽高，并返回父容器，然后进行统一的测量。
 59. listview——动态滚动展示view
    * 适配器模式：数据驱动UI，根据数据绘制UI
    * recylerBin：内部类。屏幕可见放在内存中，其余放在recylerBin
    * 优化：convertview重用（通过缓存convertView,这种利用缓存contentView的方式可以判断如果缓存中不存在View才创建View，如果已经存在可以利用缓存中的View）/viewholder（循环利用itemview。第一次加载item后，放入到内存中，下一次再加载的时候直接填充数据，不用再重新加载view。也就是不断地复用，只是更改了数据。）
+60. 跨进程调用自定义Service有两种方式：Messager和AIDL。要让两个不同的进程之间进行函数调用，就要使用进程间通信IPC，这两种方式都使用了IPC技术。在安卓系统当中，它实际上是由Binder来实现的。
+   * ALDL：定义一个文件，将service要提供给其他进程使用的接口函数定义在里面。创建一个service类，实现刚才类定义的binder。另一个应用创建serviceconnection，绑定servicec后得到返回的binder。

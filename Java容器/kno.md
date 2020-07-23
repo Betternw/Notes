@@ -81,7 +81,7 @@ List list = Arrays.asList(1, 2, 3);
 * 允许插入键为null 的键值对，使用第0个桶存放键为null 的键值对
 * 使用头插法进行插入
 
-【
+
 * 通过hash() 计算出键的hashcode， 再通过indexFor() 方法计算出对应的索引
 * 如果散列表为空, 调用resize()初始化散列表
 * 添加元素到散列表中 
