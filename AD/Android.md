@@ -4917,6 +4917,11 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
     * app/fragment/details/DetailImageAdapter：RecyclerView的adapter实现
 13. 项目总结
    * 首页展示前，整个Ａｃｔｉｖｉｔｙ作为Ｆｒａｇｍｅｎｔ的调度站，负责Ｆｒａｇｍｅｎｔ的跳转和信息传递。这样的好处是，避免跳转流程复杂，导致自己开发时候很晕。一般Ｆｒａｇｍｅｎｔ的跳转需要Ａｐｐ的当前状态，用户的当前状态，通过这两状态去决定下一个Ｆｒａｇｍｅｎｔ是什么。
-   * 
+   * MVC
+     * model：负责在数据库中存取数据
+     * view：处理数据的显示，视图是根据模型数据创建的
+     * controller：处理用户交互，从视图读取数据，并向模型发送数据。
+     * 优点：耦合性低，更改视图层代码不用重新编译模型和控制器代码
+     * 缺点：不能互相调用的时候就功能局限，独立重用功能很低。对数据可能会存在多次的频繁访问。
    
      
