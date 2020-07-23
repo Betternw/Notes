@@ -184,10 +184,24 @@ Activity B：onDestroy
 * ContentObserver：观察ContentProvider中的数据变化，并将变化通知给外界。
 44. HandlerThread
 * HandlerThread有自己的内部Looper对象，可以进行loopr循环。当有耗时任务进入队列时，则不需要开启新线程，在原有的线程中执行耗时任务即可
-45. Android中跨进程通讯的几种方式
-* Content Provider 
-* 广播
-* ALDL服务
+45. 通信
+    * Android中跨进程通讯的几种方式
+      * Content Provider 
+      * 广播
+      * ALDL服务
+    * Activity与Fragment进行通信：Bundle（在activity中建一个bundle，把要传的值存入bundle，然后通过fragment的setArguments（bundle）传到fragment，在fragment中，用getArguments接收。）、广播、Handler
+    *  Fragment加载到activity（加载进来才能启动）的两种方式：添加到布局文件中，作为xml文件；Fragmentmanager和Fragmentranscation然后提交commit方法
+    *  Fragment通信：
+       *  在frag中调用activ的方法——get acativity;
+       *   在activity中调用fragment的方法：接口回调；
+       *   在frag中调用frag：直接getActivity,使用activity的fragmenttransation的replace方法替换
+    *  Activity之间通信：intent、eventbus、广播、接口回调、
+    *   跨进程调用自定义Service有两种方式：Messager和AIDL。要让两个不同的进程之间进行函数调用，就要使用进程间通信IPC，这两种方式都使用了IPC技术。在安卓系统当中，它实际上是由Binder来实现的。
+       * ALDL：定义一个文件，将service要提供给其他进程使用的接口函数定义在里面。创建一个service类，实现刚才类定义的binder。另一个应用创建serviceconnection，绑定servicec后得到返回的binder。
+     * BroadcastReceiver 是跨应用广播，利用Binder机制实现，
+     * LocalBroadcastReceiver 是应用内广播，利用Handler实现，
+     * Activity跳转：使用intent和bundle
+     * Fragment跳转：使用activity的fragmenttransation的replace方法替换
 46. 显示Intent与隐式Intent的区别
 * 明确指出了目标组件名称的Intent，我们称之为“显式Intent” 没有明确指出目标组件名称的Intent，则称之为“隐式 Intent”。
 47. Kotlin 特性，和 Java 相比有什么不同的地方?
@@ -195,21 +209,31 @@ Activity B：onDestroy
    * 支持高阶函数
    * 语言层面解决空指针问题
 48. activity的四种状态：running paused stopped  killed
-49. Fragment加载到activity（加载进来才能启动）的两种方式：添加到布局文件中，作为xml文件；Fragmentmanager和Fragmentranscation然后提交commit方法
 50. viewpager实现页面滑动
-51. Fragment通信：在frag中调用activ的方法——get acativity; 在activity中调用fragment的方法：接口回调；在frag中调用frag：findfragmentByid
-52. service：运行在主线程中，不能做耗时操作。
-53. service和thread区别；————service运行在主线程中，不能运行耗时操作，是执行在后台不依赖于activity的，与是否耗时没有关系。，与activity通信通过async。————thread是子线程，可以运行耗时操作。
-54. 广播：应用程序之间传输信息，发送的内容是intent，intent携带数据；同一个app之间不同组件的消息通信、不同app之间的组件的相互通信；普通广播、系统广播、本地广播（只在app内传播）；静态注册：注册完成后一直运行，动态注册：跟随activity的生命周期。内部实现机制：binder机制
-55. 启动service的方式：startservice；bindservice（与activity进行绑定）
-56. handler：子线程的操作通过handler传递给主线程；使用方法：post（runnable）、sendmessage（message）；内存泄露：非静态内部类引用了外部类的引用。handler没有被释放，持有的引用没有必要释放，会内存释放——设置为静态内部类，在类内持有外部类的弱引用（弱引用也是用来描述非必需对象的，当JVM进行垃圾回收时，无论内存是否充足，都会回收被弱引用关联的对象）
-57. asyncTask：封装了线程池和handler，执行异步任务，方便的在UI线程和工作线程进行切换；内存泄露：和handler的原因相同；生命周期：在activity的destroy中调用cancel方法才行，否则会提前崩溃。
-58. 自定义View的绘制
+51. service：运行在主线程中，不能做耗时操作。
+52. service和thread区别；————service运行在主线程中，不能运行耗时操作，是执行在后台不依赖于activity的，与是否耗时没有关系。，与activity通信通过async。————thread是子线程，可以运行耗时操作。
+53. 广播：应用程序之间传输信息，发送的内容是intent，intent携带数据；同一个app之间不同组件的消息通信、不同app之间的组件的相互通信；普通广播、系统广播、本地广播（只在app内传播）；静态注册：注册完成后一直运行，动态注册：跟随activity的生命周期。内部实现机制：binder机制
+54. 启动service的方式：startservice；bindservice（与activity进行绑定）
+55. handler：子线程的操作通过handler传递给主线程；使用方法：post（runnable）、sendmessage（message）；内存泄露：非静态内部类引用了外部类的引用。handler没有被释放，持有的引用没有必要释放，会内存释放——设置为静态内部类，在类内持有外部类的弱引用（弱引用也是用来描述非必需对象的，当JVM进行垃圾回收时，无论内存是否充足，都会回收被弱引用关联的对象）
+56. asyncTask：封装了线程池和handler，执行异步任务，方便的在UI线程和工作线程进行切换；内存泄露：和handler的原因相同；生命周期：在activity的destroy中调用cancel方法才行，否则会提前崩溃。
+57. 自定义View的绘制
    * View树的绘制流程：measure（是否需要计算视图大小）——layout（是否需要视图位置）——draw（是否需要重绘）
    * measure：树的递归。从上到下有序遍历。根据父容器对子容器的测量规格的参数，获取子容器的长宽高，并返回父容器，然后进行统一的测量。
 59. listview——动态滚动展示view
    * 适配器模式：数据驱动UI，根据数据绘制UI
    * recylerBin：内部类。屏幕可见放在内存中，其余放在recylerBin
    * 优化：convertview重用（通过缓存convertView,这种利用缓存contentView的方式可以判断如果缓存中不存在View才创建View，如果已经存在可以利用缓存中的View）/viewholder（循环利用itemview。第一次加载item后，放入到内存中，下一次再加载的时候直接填充数据，不用再重新加载view。也就是不断地复用，只是更改了数据。）
-60. 跨进程调用自定义Service有两种方式：Messager和AIDL。要让两个不同的进程之间进行函数调用，就要使用进程间通信IPC，这两种方式都使用了IPC技术。在安卓系统当中，它实际上是由Binder来实现的。
-   * ALDL：定义一个文件，将service要提供给其他进程使用的接口函数定义在里面。创建一个service类，实现刚才类定义的binder。另一个应用创建serviceconnection，绑定servicec后得到返回的binder。
+60. Activity的启动模式
+   * standard：每次打开一个Activity就创建一个新的实例
+   * singleTop：栈顶有就复用，没有就重新创建一个实例
+   * singleTask：栈中有就销毁上面的所有Activity，成为新的栈顶。
+   * singleInstance：每创建一个Activity就新建一个栈。
+61. 对于 Context，你了解多少?——application service activity 都是具体的context。初始化一些系统组件 如 dialog toast 要把这个context传入
+62. IntentFilter直译：意图过滤器，可以给四大组件配置自己关心的action等，以免想打开A结果打开了B，比如Receiver需要指定intent-filter来表明自己关心什么广播等
+63. 简单介绍下ContentProvider是如何实现数据共享的？
+   * 可以通过ContenrResolver来操作ContentProvider暴露的数据
+   * ContentProvider：对外提供了访问数据的接口
+   * ContenrResolver：通过不同的URI操作不同的ContentProvider中的数据
+
+
+
