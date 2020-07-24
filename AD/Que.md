@@ -234,6 +234,46 @@ Activity B：onDestroy
    * 可以通过ContenrResolver来操作ContentProvider暴露的数据
    * ContentProvider：对外提供了访问数据的接口
    * ContenrResolver：通过不同的URI操作不同的ContentProvider中的数据
+64. OkHttp
+     * 关于网络请求的第三方类库，其中封装了网络请求的get、post等操作的底层实现，
+     * 创建OkHttpclient对象：http请求的客户端类，client对象作为全局的实例进行保存。只需要这一个实例对象。所有的http请求共用client实例对象的response缓存和线程池。
+     * 创建request对象：存储了请求报文的信息（请求的URL地址、请求的方法和请求体，标志位），使用builder模式进行创建，将创建和表示分离。
+     * new call 方法创建call 对象：代表一个实际的http请求，连接request和response的桥梁。这个对象可以同步、异步获取数据
+       * execute（）： Response response = client.newCall(request).execute();。同步需要开启子线程，会阻塞进程获取数据，接收一个request对象，执行execute方法后返回response对象，也就是结果。
+         * 首先使用new创建OkHttpClient对象。然后调用OkHttpClient对象的newCall方法生成一个Call对象，该方法接收一个Request对象，Request对象存储的就是我们的请求URL和请求参数。最后执行Call对象的execute方法，得到Response对象，这个Response对象就是返回的结果。
+       * enqueue：client.newCall(request).enqueue(new Callback()。接收callback参数，不会阻塞，开启一个子线程，在子线程中操作。当异步请求成功时，回调onResponse方法，获取okHttp的response对象。当请求失败时，回调onFailture方法。这两个方法都在工作线程当中执行。
+         * 首先使用new创建OkHttpClient对象。然后调用OkHttpClient对象的newCall方法生成一个Call对象，该方法接收一个Request对象，Request对象存储的是我们的请求URL和请求参数。最后执行Call对象的enqueue方法，该方法接收一个Callback回调对象，在回调对象的onResponse方法中拿到Response对象，这就是返回的结果。
+     * post方法：在生成request方法的时候执行了post方法，get方法没有。因为request的builder时候，默认是get方法，所以需要post时就需要申明post方法。
+65. retrofit
+    * 创建一个接口，作为http请求的api接口。
+      * 使用注解的方式描述和配置网络请求参数。实际上是运用动态代理的方式将注解翻译成一个Http请求，然后执行该请求。
+      * 请求方法有GET、POST、PUT、HEAD、DELETE等
+      * 方法的返回类型必须为Call，xxx是接收数据的类
+      * User中字段的名字必须和后台Json定义的字段名是一致的，这样Json才能解析成功。
+      * public interface GitHubService {
+         @GET("getUserData")
+           Call<User> getCall();
+             }
+    * 创建一个Retrofit对象
+      * builder模式
+      * baseUrl拼接Url+网络请求接口的注解设置——网络请求的地址
+      * addConverterFactory(GsonConverterFactory.create())的作用是设置数据解析器，它可以解析Gson、JsonObject、JsonArray这三种格式的数据。
+      * Retrofit retrofit = new Retrofit.Builder().baseUrl("http://10.75.114.138:8081/")
+                .addConverterFactory(GsonConverterFactory.create()).build(); //设置网络请求的Url地址
+                .addConverterFactory(GsonConverterFactory.create()) //设置数据解析器
+                .build();
+    * 创建网络请求接口实例
+      * retrofit的create方法创建request对象
+      * retrofit的getcall创建call对象
+    * 发送网络请求——同步异步的请求和okHttp请求的一样。
+    * retrofit在OkHttp的上面封装了一层，使请求接口和数据解析更加简洁明了。
+66. ButterKnife
+    * 通过解析注解来实现辅助代码
+    * 绑定一个View  注解@BindView
+    * 给view添加点击事件
+67. Glide
+    * 传入context对象，调用load方法，使用into方法显示imageView
+  
 
 
 
