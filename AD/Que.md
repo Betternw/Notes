@@ -41,25 +41,27 @@ AsyncTask中有两个线程池和一个Handler，其中线程池SerialExecutor�
 sHandler是一个静态的Handler对象，为了能够将执行环境切换到主线程，这就要求sHandler这个对象必须在主线程创建。由于静态成员会在加载类的时候进行初始化，因此这就变相要求AsyncTask的类必须在主线程中加载，否则同一个进程中的AsyncTask都将无法正常工作。
 
 5. onSaveInstanceState() 与 onRestoreIntanceState()
+* 除了在栈顶的activity，其他的activity都有可能在内存不足的时候被系统回收，一个activity越处于栈底，被回收的可能性就越大。调用 onPause()和 onStop()方法后的 activity 实例仍然存在于内存中，activity 的所有信息和状态数据不会消失，当 activity 重新回到前台之后，所有的改变都会得到保留。当系统内存不足时， 调用onPause()和onStop()方法后的 activity可能会被系统摧毁,，此时内存中就不会存有该 activity 的实例对象了。如果之后这个 activity 重新回到前台，之前所作的改变就会消失。
 * Activity的 onSaveInstanceState() 和 onRestoreInstanceState()并不是生命周期方法，并不一定会被触发。
 * 当应用遇到意外情况（如：内存不足、用户直接按Home键）由系统销毁一个Activity时，onSaveInstanceState() 会被调用。但是当用户主动去销毁一个Activity时，例如在应用中按返回键，onSaveInstanceState()就不会被调用。因为在这种情况下，用户的行为决定了不需要保存Activity的状态。通常onSaveInstanceState()只适合用于保存一些临时性的状态，而onPause()适合用于数据的持久化保存。 
+* onSaveInstanceState()方法接受一个 Bundle 类型的参数，开发者可以将状态数据存储到这个 Bundle 对象中，这样即使 activity 被系统摧毁，当用户重新启动这个 activity 而调用它的onCreate()方法时，上述的 Bundle 对象会作为实参传递给 onCreate()方法，开发者可以从 Bundle 对象中取出保存的数据，然后利用这些数据将 activity 恢复到被摧毁之前的状态。
 * 这个方法在一个activity被杀死前调用，当该activity在将来某个时刻回来时可以恢复其先前状态。 例如，如果activity B启用后位于activity A的前端，在某个时刻activity A因为系统回收资源的问题要被杀掉，A通过onSaveInstanceState将有机会保存其用户界面状态，使得将来用户返回到activity A时能通过onCreate(Bundle)或者onRestoreInstanceState(Bundle)恢复界面的状态
-6. android中进程的优先级？
+1. android中进程的优先级？
     1. 前台进程：
     即与用户正在交互的Activity或者Activity用到的Service等，如果系统内存不足时前台进程是最晚被杀死的
 
-    2. 可见进程：
+    1. 可见进程：
     可以是处于暂停状态(onPause)的Activity或者绑定在其上的Service，即被用户可见，但由于失了焦点而不能与用户交互
 
-    3. 服务进程：
+    1. 服务进程：
     其中运行着使用startService方法启动的Service，虽然不被用户可见，但是却是用户关心的，例如用户正在非音乐界面听的音乐或者正在非下载页面下载的文件等；当系统要空间运行，前两者进程才会被终止
 
-    4. 后台进程：
+    1. 后台进程：
     其中运行着执行onStop方法而停止的程序，但是却不是用户当前关心的，例如后台挂着的QQ，这时的进程系统一旦没了有内存就首先被杀死
 
-    5. 空进程：
+    1. 空进程：
     不包含任何应用程序的进程，这样的进程系统是一般不会让他存在的
-7. Bunder传递对象为什么需要序列化？Serialzable和Parcelable的区别？
+2. Bunder传递对象为什么需要序列化？Serialzable和Parcelable的区别？
 * 因为bundle传递数据时只支持基本数据类型，所以在传递对象时需要序列化转换成可存储或可传输的本质状态（字节流）
 * Serializable（Java自带）：序列化，表示将一个对象转换成存储或可传输的状态。序列化后的对象可以在网络上进传输，也可以存储到本地。在硬盘上。
 * Parcelable（android专用）：使用Parcelable也可以实现相同的效果，不过不同于将对象进行序列化，Parcelable方式的实现原理是将一个完整的对象进行分解，而分解后的每一部分都是Intent所支持的数据类型，这也就实现传递对象的功能了。在内存中
@@ -188,20 +190,22 @@ Activity B：onDestroy
     * Android中跨进程通讯的几种方式
       * Content Provider 
       * 广播
+        * BroadcastReceiver 是跨应用广播，利用Binder机制实现，
+        * LocalBroadcastReceiver 是应用内广播，利用Handler实现，
       * ALDL服务
+    * Activity跳转：使用intent和bundle
+       * 显示intent：Intent intent = new Intent(MainActivity.this,SecondActivity.class);startActivity(intent);
+       * 隐式intent
+         * 在manifests.xml配置文件中给SecondActivity设置<intent-filter>,绑定action，命名为“android.intent.action.MY_ACTION”
+         *  intent.setAction("com.android.activity.MY_ACTION");  startActivity(intent);
+    * Activity之间通信：intent、bundle、eventbus、广播、接口回调、
     * Activity与Fragment进行通信：Bundle（在activity中建一个bundle，把要传的值存入bundle，然后通过fragment的setArguments（bundle）传到fragment，在fragment中，用getArguments接收。）、广播、Handler
-    *  Fragment加载到activity（加载进来才能启动）的两种方式：添加到布局文件中，作为xml文件；Fragmentmanager和Fragmentranscation然后提交commit方法
-    *  Fragment通信：
-       *  在frag中调用activ的方法——get acativity;
-       *   在activity中调用fragment的方法：接口回调；
-       *   在frag中调用frag：直接getActivity,使用activity的fragmenttransation的replace方法替换
-    *  Activity之间通信：intent、eventbus、广播、接口回调、
-    *   跨进程调用自定义Service有两种方式：Messager和AIDL。要让两个不同的进程之间进行函数调用，就要使用进程间通信IPC，这两种方式都使用了IPC技术。在安卓系统当中，它实际上是由Binder来实现的。
+    * Fragment通信
+       * 在fragment中调用activity的方法：getActivity
+       * 在Activity中调用Fragment的方法：接口回调
+       * 在Fragment中调用Fragment的方法：findFragmentByID
+    * 跨进程调用自定义Service有两种方式：Messager和AIDL。要让两个不同的进程之间进行函数调用，就要使用进程间通信IPC，这两种方式都使用了IPC技术。在安卓系统当中，它实际上是由Binder来实现的。
        * ALDL：定义一个文件，将service要提供给其他进程使用的接口函数定义在里面。创建一个service类，实现刚才类定义的binder。另一个应用创建serviceconnection，绑定servicec后得到返回的binder。
-     * BroadcastReceiver 是跨应用广播，利用Binder机制实现，
-     * LocalBroadcastReceiver 是应用内广播，利用Handler实现，
-     * Activity跳转：使用intent和bundle
-     * Fragment跳转：使用activity的fragmenttransation的replace方法替换
 46. 显示Intent与隐式Intent的区别
 * 明确指出了目标组件名称的Intent，我们称之为“显式Intent” 没有明确指出目标组件名称的Intent，则称之为“隐式 Intent”。
 47. Kotlin 特性，和 Java 相比有什么不同的地方?
@@ -273,6 +277,80 @@ Activity B：onDestroy
     * 给view添加点击事件
 67. Glide
     * 传入context对象，调用load方法，使用into方法显示imageView
+68. Activity中onNewIntent方法的调用时机和使用场景？
+   * 当启动模式为single Top的时候，如果栈顶有当前activity，那么复用这个activity，启动模式就是onnewintent（）方法。
+69. binder和bundle
+   * binder
+     * 跨进程通信，客户端和服务端之间通信
+     * Android使用Linux内核，通信方式有：socket、binder、管道
+     * 性能更好，binder比socket更高效
+     * 安全性更高，socket是ip地址手动填写，会有安全性问题。binder要进行通信双方信息校验，所以更安全
+     * 通信模型步骤
+       * 建立serviceManager，相当于通信录，
+       * server进程进行注册，
+       * 通信时，查询serviceManeger，将信息告诉client，client通过binder与server进行通信
+     * 跨进程通信
+       * server在manage中进行注册方法
+       * client查询是否有目标方法，
+       * manage返回方法的代理对象，这个方法内部是空的，client可以进行调用
+       * 当client调用代理对象的时候，返回binder驱动，binder驱动就会去调用server的方法，将结果返回给manage再返回给client。
+     * 对于server端来说，binder是本地对象。对于client来说，binder是代理对象
+   * binder例子
+     * ALDL
+       * asInterface：如果AB在同一个进程就不会跨进程，如果不是就会返回proxy代理类的对象，通过这个对象来获取数据
+       * onTransct：根据ALDL返回的方法编号进行调用相应的方法
+   * bundle
+     * 两个activity之间通信，是一种数据载体
+     * Intent直接传值和通过Bundle包装后传值的比较
+       * 若要从AActivity跳转到BActivity时需要写2个Intent，如果涉及的传值的话，Intent还要写两遍添加值的方法。如果用1个Bundle直接把值先存里边 然后再存到Intent中代码会显得更加简洁。
+     * 应用场景
+       * Activity：onCreat()、onSaveInstanceState()
+       * Fragment： setArguments()
+       * Message：setData()
+70. Fragment
+   * 为什么被称为第五大组件？
+     * fragment比activity更节省内存，并且UI的切换更加舒适，使用replace等方法进行切换fragment，不会有很明显的效果，但是activity的切换会有明显的翻页效果。
+   * 传值
+     * Activity向Fragment传值——bundle
+       * 将要传的值放入bundle对象中
+       * 在activity中创建fragment对象，使用fragment.setArgument（）方法，将bundle传递到fragment中。
+       * 在Fragment中调用getArgument（）方法。获得bundle对象，就能得到值。
+     * Fragment向Activity传值：
+       * 在Activity中调用getFragmentManager()得到fragmentManager,，调用findFragmentByTag(tag)或者通过findFragmentById(id)
+         * FragmentManager fragmentmanager = getFragmentmanager();
+         * Fragment fragment = fragmentmanager.findFragmentByTag(tag)
+       * 回调接口
+         * 在Fragment中定义一个接口，接口中有一个空的方法，在Fragmnt中调用该方法并把值作为参数放到方法中，在ACtivity中实现这个接口重写这个方法，这样值就传入到了Activity中。
+     * Fragment之间传值
+       * 接口回调
+       * setArgument+bundle
+       * 通过findFragmentByTag得到另一个的Fragment的对象，这样就可以调用另一个的方法了。
+   * 加载
+     * Fragment加载到Activity中
+       * 添加Fragment到Activity的布局文件中
+       * 动态地在activity中添加fragment
+           * 添加一个FragmentTransction的实例
+             * FragmentManager fragmentmanager = getFragmentmanager();
+             * FragmentTransction transction = fragmentmanager.beginTransction（）
+           * 用add方法加上Fragment的对象rightFragment
+             * RightFragment rightFragment = new RightFragment（）
+             * fragmentTransction.add(fragment的id)
+           * 调用commit方法使得FragmentTransction实例的改变生效
+             * transction.commit（）
+   * Fragment跳转：使用activity的fragmenttransation的replace方法替换
+   * Activity跳转：使用intent和bundle
+       * 显示intent：Intent intent = new Intent(MainActivity.this,SecondActivity.class);startActivity(intent);
+       * 隐式intent
+         * 在manifests.xml配置文件中给SecondActivity设置<intent-filter>,绑定action，命名为“android.intent.action.MY_ACTION”
+         *  intent.setAction("com.android.activity.MY_ACTION");  startActivity(intent);
+   * 通信
+     * 在fragment中调用activity的方法：getActivity
+     * 在Activity中调用Fragment的方法：接口回调
+     * 在Fragment中调用Fragment的方法：findFragmentByID
+   * FragmentPagerAdapter与FragmentStatePagerAdapter的区别：
+     * FragmentPagerAdapter：页面较少。因为在destroyitem的时候不会回收内存，只是将Fragment和UI进行分离
+     * FragmentStatePagerAdapter：页面较多，在destroyitem的时候会回收内存
+  
   
 
 
