@@ -140,18 +140,33 @@ bind的方式开启服务，绑定服务，调用者挂了，服务也会跟着�
 * 实现单个线程单例以及单个线程上下文信息存储，比如交易id等。实现线程安全，非线程安全的对象使用ThreadLocal之后就会变得线程安全，因为每个线程都会有一个对应的实例。 承载一些线程相关的数据，避免在方法中来回传递参数。
 36. MVP，MVVM，MVC
 * MVC
-   * 
-   视图层(View) 对应于xml布局文件和java代码动态view部分
-   
-   控制层(Controller) MVC中Android的控制层是由Activity来承担的，Activity本来主要是作为初始化页面，展示数据的操作，但是因为XML视图功能太弱，所以Activity既要负责视图的显示又要加入控制逻辑，承担的功能过多。
-   
-   模型层(Model) 针对业务模型，建立数据结构和相关的类，它主要负责网络请求，数据库处理，I/O的操作。
+   * 视图层(View) 对应于xml布局文件和java代码动态view部分
+   * 控制层(Controller) MVC中Android的控制层是由Activity来承担的，Activity本来主要是作为初始化页面，展示数据的操作，但是因为XML视图功能太弱，所以Activity既要负责视图的显示又要加入控制逻辑，承担的功能过多。
+   * 模型层(Model) 针对业务模型，建立数据结构和相关的类，它主要负责网络请求，数据库处理，I/O的操作。
+   * model：负责在数据库中存取数据，业务逻辑处理
+   * view：处理数据的显示，视图是根据模型数据创建的，比如xml文件
+   * controller：处理用户交互，从视图读取数据，并向模型发送数据。Activity处理用户交互问题
+   * 优点：耦合性低，更改视图层代码不用重新编译模型和控制器代码。便于UI界面逻辑的显示和业务逻辑的分离。
+   * 缺点：不能互相调用的时候就功能局限，独立重用功能很低。对数据可能会存在多次的频繁访问。
+   * 适合于大型项目、业务逻辑复杂、需求变更频繁
 * MVP
-   * 通过引入接口BaseView，让相应的视图组件如Activity，Fragment去实现BaseView，实现了视图层的独立，在MVP中View并不直接使用Model，它们之间的通信是通过Presenter(MVC中的Controller)来进行的，所有的交互都发生在Presenter内部，而在MVC中View会从直接Model中读取数据而不是通过Controller。MVP彻底解决了MVC中View和Controller分不清楚的问题，在该模式中，视图通常由表示器初始化，它呈现用户界面（UI）并接受用户所发出命令，但不对用户的输入作任何逻辑处理，而仅仅是将用户输入转发给表示器。通常每一个视图对应一个表示器，但是也可能一个拥有较复杂业务逻辑的视图会对应多个表示器，每个表示器完成该视图的一部分业务处理工作，降低了单个表示器的复杂程度，但是随着业务逻辑的增加，一个页面可能会非常复杂，UI的改变是非常多，会有非常多的case，这样就会造成View的接口会很庞大。
+   * 在MVP中View并不直接使用Model，它们之间的通信是通过Presenter(MVC中的Controller)来进行的，所有的交互都发生在Presenter内部，而在MVC中View会从直接Model中读取数据而不是通过Controller。
+   * MVP彻底解决了MVC中View和Controller分不清楚的问题（View功能有限，会放到controcller中）。在该模式中，视图通常由表示器初始化，但不对用户的输入作任何逻辑处理，而仅仅是将用户输入转发给表示器。通常每一个视图对应一个表示器，但是也可能一个拥有较复杂业务逻辑的视图会对应多个表示器，每个表示器完成该视图的一部分业务处理工作，降低了单个表示器的复杂程度，
+   * 但是随着业务逻辑的增加，一个页面可能会非常复杂，UI的改变是非常多，会有非常多的case，这样就会造成View的接口会很庞大。
+   * View的xml文件功能有限，Activity中不仅处理业务逻辑还要处理操作UI。因此controcller会很厚重
+   * M：业务逻辑和实体逻辑
+   * V：Activity，负责view的绘制和用户的交互
+   * P：负责完成View与Model之间的交互
+   * View和Model不直接交互。通过presenter层进行交互
+   * 
 * MVVM
+   * view  viewmodel model，后两者双向交互
+   * View：activity+xml。负责View的绘制与用户交互。Activity层不写业务逻辑，只写初始化控件等。更新UI通过数据绑定，在viewModel中来做。
+   * model：数据模型，数据获取存储和变化，提供数据接口，供viewModel使用。
+   * viewmodel： 数据交互，业务逻辑，负责交互view和model。
    * UI的改变多的情况下，通过双向绑定的机制，实现数据和UI内容，只要想改其中一方，另一方都能够及时更新的一种设计理念，这样就省去了很多在View层中写很多case的情况，只需要改变数据就行。
 
-37. SharedPrefrences
+1.  SharedPrefrences
 * 在键值对中存储私有原始数据。
 * apply和commit有什么区别？
    * apply没有返回值而commit返回boolean表明修改是否提交成功。
