@@ -10,7 +10,7 @@
    * 设置Activity的android:configChanges=”orientation |keyboardHidden”时，切屏不会重新调用各个生命周期，只会执行onConfigurationChanged方法
 4. AsyncTask的缺陷和问题，说说他的原理
    * AsyncTask是什么？
-      * AsyncTask是一种轻量级的异步任务类，它可以在线程池中执行后台任务，然后把执行的进度和最终结果传递给主线程并在主线程中更新UI。
+      * AsyncTask是一种轻量级的异步任务抽象类，它可以在线程池中执行后台任务，然后把执行的进度和最终结果传递给主线程并在主线程中更新UI。
       * AsyncTask是一个抽象的泛型类，它提供了Params、Progress和Result这三个泛型参数，其中Params表示参数的类型，Progress表示后台任务的执行进度和类型，而Result则表示后台任务的返回结果的类型，如果AsyncTask不需要传递具体的参数，那么这三个泛型参数可以用Void来代替。
 
    * 关于线程池：
@@ -21,24 +21,41 @@
 
    * 一些问题：
 
-1.生命周期
-AsynTask会一直执行，直到doInBackground()方法执行完毕，然后，如果cancel(boolean)被调用,那么onCancelled(Result result)方法会被执行；否则，执行onPostExecute(Result result)方法。如果我们的Activity销毁之前，没有取消AsyncTask，这有可能让我们的应用崩溃(crash)。因为它想要处理的view已经不存在了。所以，我们是必须确保在销毁活动之前取消任务。总之，我们使用AsyncTask需要确保AsyncTask正确的取消。
+       1.生命周期
+       在activity的destroy中调用cancel方法才行，否则会提前崩溃。AsynTask会一直执行，直到doInBackground()方法执行完毕，然后，如果cancel(boolean)被调用,那么onCancelled(Result result)方法会被执行；否则，执行onPostExecute(Result result)方法。如果我们的Activity销毁之前，没有取消AsyncTask，这有可能让我们的应用崩溃(crash)。因为它想要处理的view已经不存在了。所以，我们是必须确保在销毁活动之前取消任务。总之，我们使用AsyncTask需要确保AsyncTask正确的取消。
 
-2.内存泄漏
+       2.内存泄漏
 
-如果AsyncTask被声明为Activity的非静态内部类，那么AsyncTask会保留一个对Activity的引用。如果Activity已经被销毁，AsyncTask的后台线程还在执行，它将继续在内存里保留这个引用，导致Activity无法被回收，引起内存泄漏。
+       如果AsyncTask被声明为Activity的非静态内部类，那么AsyncTask会保留一个对Activity的引用。如果Activity已经被销毁，AsyncTask的后台线程还在执行，它将继续在内存里保留这个引用，导致Activity无法被回收，引起内存泄漏。
 
-3.结果丢失
+       3.结果丢失
 
-屏幕旋转或Activity在后台被系统杀掉等情况会导致Activity的重新创建，之前运行的AsyncTask会持有一个之前Activity的引用，这个引用已经无效，这时调用onPostExecute()再去更新界面将不再生效。
+       屏幕旋转或Activity在后台被系统杀掉等情况会导致Activity的重新创建，之前运行的AsyncTask会持有一个之前Activity的引用，这个引用已经无效，这时调用onPostExecute()再去更新界面将不再生效。
 
-4.并行还是串行
+       4.并行还是串行
 
-在Android1.6之前的版本，AsyncTask是串行的，在1.6之后的版本，采用线程池处理并行任务，但是从Android 3.0开始，为了避免AsyncTask所带来的并发错误，又采用一个线程来串行执行任务。可以使用executeOnExecutor()方法来并行地执行任务。
+       在Android1.6之前的版本，AsyncTask是串行的，在1.6之后的版本，采用线程池处理并行任务，但是从Android 3.0开始，为了避免AsyncTask所带来的并发错误，又采用一个线程来串行执行任务。可以使用executeOnExecutor()方法来并行地执行任务。
+          * 串行：一个线程顺序执行n个任务
+          * 并行：N个线程分别执行N个任务，有多个cpu
+          * 并发：一个cpu，分发时间片，不同时间段执行不同任务，其他线程就处于阻塞状态
 
-* AsyncTask原理
-AsyncTask中有两个线程池和一个Handler，其中线程池SerialExecutor用于任务的排队，而线程池THREAD_POOL_EXECUTOR用于真正地执行任务，InternalHandler用于将执行环境从线程池切换到主线程。
-sHandler是一个静态的Handler对象，为了能够将执行环境切换到主线程，这就要求sHandler这个对象必须在主线程创建。由于静态成员会在加载类的时候进行初始化，因此这就变相要求AsyncTask的类必须在主线程中加载，否则同一个进程中的AsyncTask都将无法正常工作。
+     * AsyncTask原理
+        * AsyncTask中有两个线程池和一个Handler，其中线程池SerialExecutor用于任务的排队，而线程池THREAD_POOL_EXECUTOR用于真正地执行任务，InternalHandler用于将执行环境从线程池切换到主线程sHandler是一个静态的Handler对象，为了能够将执行环境切换到主线程，这就要求sHandler这个对象必须在主线程创建。由于静态成员会在加载类的时候进行初始化，因此这就变相要求AsyncTask的类必须在主线程中加载，否则同一个进程中的AsyncTask都将无法正常工作。
+    * 同步和异步
+      * 同步：方法调用一旦开始，必须等到执行完成后才能继续后续的操作
+      * 异步：方法调用一旦开始，方法调用就会返回，实际的执行会在另外一个线程中执行，整个过程不会阻碍调用者的工作。
+    * 使用方法
+      * 三个参数
+        * Params：启动任务执行的输入参数，比如HTTP请求的URL。
+        * Progress：后台任务执行的百分比。
+        * Result：后台任务执行最终返回的结果，比如String，Integer等。
+      * 五个方法
+        * execute（Params... params）：执行一个异步任务，需要我们手动去调用此方法，触发异步任务的执行。
+        * onPreExecute()：在execute(params... params)被调用后立即执行，一般用来在执行后台任务前对UI做一些标记。
+        * doInBackground(Params... params)：在onPreExecute()完成后立即执行，用于执行耗时操作，在执行过程中可以调用publishProgress(Progress... values)来更新进度信息。
+        * onProgressUpdate(Progress... values)：在调用publishProgress(Progress... values)时，此方法被执行，直接将进度信息更新到UI组件上。
+        * onPostExecute(Result result)：当后台操作结束时，此方法将会被调用，计算结果将作为参数传递到此方法中，直接将结果显示到UI组件上。
+
 
 5. onSaveInstanceState() 与 onRestoreIntanceState()
 * 除了在栈顶的activity，其他的activity都有可能在内存不足的时候被系统回收，一个activity越处于栈底，被回收的可能性就越大。调用 onPause()和 onStop()方法后的 activity 实例仍然存在于内存中，activity 的所有信息和状态数据不会消失，当 activity 重新回到前台之后，所有的改变都会得到保留。当系统内存不足时， 调用onPause()和onStop()方法后的 activity可能会被系统摧毁,，此时内存中就不会存有该 activity 的实例对象了。如果之后这个 activity 重新回到前台，之前所作的改变就会消失。
@@ -82,17 +99,6 @@ ViewStub: 按需加载，减少内存使用量、加快渲染速度、不支持 
 12. Asset目录与res目录的区别
 * assets：不会在 R 文件中生成相应标记，存放到这里的资源在打包时会打包到程序安装包中。（通过 AssetManager 类访问这些文件）
 * res：会在 R 文件中生成 id 标记，资源在打包时如果使用到则打包到安装包中，未用到不会打入安装包中。
-13. Handler机制
-* message：消息。
-* MessageQueue：消息队列，负责消息的存储与管理，负责管理由 Handler 发送过来的 Message。读取会自动删除消息，单链表维护，在其next()方法中会无限循环，不断判断是否有消息，有就返回这条消息并移除。
-* Looper：消息循环器，负责关联线程以及消息的分发，在该线程下从 MessageQueue获取 Message，分发给Handler
-Looper创建的时候会创建一个 MessageQueue，调用loop()方法的时候消息循环开始，其中会不断调用messageQueue的next()方法，当有消息就处理，否则阻塞在messageQueue的next()方法中。当Looper的quit()被调用的时候会调用messageQueue的quit()，此时next()会返回null，然后loop()方法也就跟着退出。
-* Handler：消息处理器，负责发送并处理消息
-* 1、Handler通过sendMessage()发送消息Message到消息队列MessageQueue。
-* 2、Looper通过loop()不断提取触发条件的Message，并将Message交给对应的target handler来处理。
-* 3、target handler调用自身的handleMessage()方法来处理Message。
-* Handler 发送的消息由 MessageQueue 存储管理，并由 Looper 负责回调消息到 handleMessage()。
-* Handler 引起的内存泄露原因以及最佳解决方案——当Handler消息队列 还有未处理的消息 / 正在处理消息时，存在引用关系： “未被处理 / 正处理的消息Message持有Handler实例的引用，handler又持有外部类的引用。——将 Handler 定义成静态的内部类，在内部持有 Activity 的弱引用，
 14. 程序A能否接收到程序B的广播？
 * 能，使用全局的BroadCastRecevier能进行跨进程通信，但是注意它只能被动接收广播。LocalBroadCastRecevier只限于本进程的广播间通信。
 15. 数据加载更多涉及到分页，你是怎么实现的？
@@ -128,8 +134,8 @@ bind的方式开启服务，绑定服务，调用者挂了，服务也会跟着�
 34. Handler、Thread和HandlerThread的差别
 * Handler：在android中负责发送和处理消息，通过它可以实现其他支线线程与主线程之间的消息通讯。
 * Thread：Java进程中执行运算的最小单位，亦即执行处理机调度的基本单位。某一进程中一路单独运行的程序。
-* HandlerThread：继承自Thread的类HandlerThread，H本质就是个Thread。在内部直接实现了Looper的实现，这是Handler消息机制必不可少的。有了自己的looper，可以在自己的线程中分发和处理消息。
-35. ThreadLocal的原理
+* HandlerThread：因为多次创建和销毁线程是很耗费资源的。继承自Thread的类HandlerThread，本质就是个Thread。在内部直接实现了Looper的实现，这是Handler消息机制必不可少的。有了自己的looper，可以在自己的线程中分发和处理消息，执行异步任务。它不需要我们去拿主线程的Looper，也不用手动调用Looper.prepare和Looper.loop，它已经封装了Looper，
+1.  ThreadLocal的原理
 * ThreadLocal相当于线程内的内存，一个局部变量。每次可以对线程自身的数据读取和操作，并不需要通过缓冲区与 主内存中的变量进行交互。并不会像synchronized那样修改主内存的数据，再将主内存的数据复制到线程内的工作内存。ThreadLocal可以让线程独占资源，存储于线程内部，避免线程堵塞造成CPU吞吐下降。
 * 实现单个线程单例以及单个线程上下文信息存储，比如交易id等。实现线程安全，非线程安全的对象使用ThreadLocal之后就会变得线程安全，因为每个线程都会有一个对应的实例。 承载一些线程相关的数据，避免在方法中来回传递参数。
 36. MVP，MVVM，MVC
@@ -189,7 +195,7 @@ Activity B：onDestroy
 45. 通信
     * Android中跨进程通讯的几种方式
       * Content Provider 
-      * 广播
+      * 广播：使用intent携带数据
         * BroadcastReceiver 是跨应用广播，利用Binder机制实现，
         * LocalBroadcastReceiver 是应用内广播，利用Handler实现，
       * ALDL服务
@@ -215,14 +221,50 @@ Activity B：onDestroy
 48. activity的四种状态：running paused stopped  killed
 50. viewpager实现页面滑动
 51. service：运行在主线程中，不能做耗时操作。
-52. service和thread区别；————service运行在主线程中，不能运行耗时操作，是执行在后台不依赖于activity的，与是否耗时没有关系。，与activity通信通过async。————thread是子线程，可以运行耗时操作。
+52. service和thread区别；————service运行在主线程中，不能运行耗时操作，是执行在后台不依赖于activity的，与是否耗时没有关系。，与activity通信通过async。————thread是子线程，可以运行耗时操作。是分配cpu的基本单位。
 53. 广播：应用程序之间传输信息，发送的内容是intent，intent携带数据；同一个app之间不同组件的消息通信、不同app之间的组件的相互通信；普通广播、系统广播、本地广播（只在app内传播）；静态注册：注册完成后一直运行，动态注册：跟随activity的生命周期。内部实现机制：binder机制
-54. 启动service的方式：startservice；bindservice（与activity进行绑定）
-55. handler：子线程的操作通过handler传递给主线程；使用方法：post（runnable）、sendmessage（message）；内存泄露：非静态内部类引用了外部类的引用。handler没有被释放，持有的引用没有必要释放，会内存释放——设置为静态内部类，在类内持有外部类的弱引用（弱引用也是用来描述非必需对象的，当JVM进行垃圾回收时，无论内存是否充足，都会回收被弱引用关联的对象）
-56. asyncTask：封装了线程池和handler，执行异步任务，方便的在UI线程和工作线程进行切换；内存泄露：和handler的原因相同；生命周期：在activity的destroy中调用cancel方法才行，否则会提前崩溃。
-57. 自定义View的绘制
+54. 启动service的方式：
+  * startservice：activity销毁了不会影响service，传递的参数是intent。第一次调用startService方法时，onCreate方法、onStartCommand方法将依次被调用，而多次调用startService时，只有onStartCommand方法会被多次调用。
+  * bindservice（通过ibinder接口与activity进行绑定），传递的参数是binder
+55.  Service和IntentService的区别：
+   * service不可以执行耗时操作，因此创建intentService，继承自service，在onCreate的时候，建立一个内部的线程去执行耗时操作。
+56. onStartCommand四种返回值策略
+  * start_sticky:service进程被kill掉，保留开始状态不保留intent数据。系统调用onStartCommand重新开始service，如果没有命令传入那么intent是null。默认情况
+  * start_not_sticky:如果被kill掉，系统不会自动重启。
+  * start_redeliver_intent:重启intent。如果服务被kill，会自动重启并传入intent
+  * start_sticky_compatibility:第一种的兼容版本， 不保证服务被kill后一定能重启
+57. 为啥不在Activity中开启子线程，而是在Service中开启子线程？
+  * 因为在Activity中开启子线程，当Activity被销毁了，子线程是无法控制的，但是如果在Service中开启子线程，就无需担心这些，完全不用担心对子线程的控制，因为子线程都在Service中。
+58. handler——发送处理消息
+   * 子线程的操作通过handler传递给主线程；
+   * Handler在子线程中怎么发送消息，
+     * 拿到主线程的Looper或者通过手动调用Looper.prepare和Looper.loop，
+     * HandlerThread：它不需要我们去拿主线程的Looper，也不用手动调用Looper.prepare和Looper.loop，它已经封装了Looper，
+   * 使用方法：post（runnable）、sendmessage（message）；
+      * message：消息。
+      * MessageQueue：消息队列，负责消息的存储与管理，负责管理由 Handler 发送过来的 Message。读取会自动删除消息，单链表维护，在其next()方法中会无限循环，不断判断是否有消息，有就返回这条消息并移除。
+      * Looper：消息循环器，负责关联线程以及消息的分发，在该线程下从 MessageQueue获取 Message，分发给Handler
+      * Looper创建的时候会创建一个 MessageQueue，调用loop()方法的时候消息循环开始，其中会不断调用messageQueue的next()方法，当有消息就处理，否则阻塞在messageQueue的next()方法中。当Looper的quit()被调用的时候会调用messageQueue的quit()，此时next()会返回null，然后loop()方法也就跟着退出。
+      * 过程
+        * 主线程创建handler，复写handlemessage方法
+        * 子线程通过message属性调用handlermeaasge方法，将子线程中消息传到主线程
+        * 通过handlermessage的复写方法进行相应的ui线程的处理
+      * Handler：消息处理器，负责发送并处理消息
+      * 1、Handler通过sendMessage()发送消息Message到消息队列MessageQueue。
+      * 2、Looper通过loop()不断提取触发条件的Message，并将Message交给对应的target handler来处理。
+      * 3、target handler调用自身的handleMessage()方法来处理Message。
+      * Handler 发送的消息由 MessageQueue 存储管理，并由 Looper 负责回调消息到 handleMessage()。
+   * 内存泄露：
+     * 非静态内部类引用了外部类的引用。handler没有被释放，持有的引用没有必要释放，会内存释放——设置为静态内部类，在类内持有外部类的弱引用（弱引用也是用来描述非必需对象的，当JVM进行垃圾回收时，无论内存是否充足，都会回收被弱引用关联的对象）
+     * Handler 引起的内存泄露原因以及最佳解决方案——当Handler消息队列 还有未处理的消息 / 正在处理消息时，存在引用关系： “未被处理 / 正处理的消息Message持有Handler实例的引用，handler又持有外部类的引用。——将 Handler 定义成静态的内部类，在内部持有 Activity 的弱引用，
+   * Looper循环为什么不会导致应用卡死
+     * 因为死循环的作用是保证不断循环，主线程可以一直处于运行状态。通过loop循环遍历MessageQueue,然后通过H handler类的handleMessage方法去处理activity相关的start、pause、stop、destroy等各类事件。真正卡死主线程操作的是在回调方法onCreate、onStart、onResume等操作时间过长，会导致掉帧甚至ANR，Looper.loop()本身不会导致应用卡死。
+   * 主线程的死循环一直运行是不是特别消耗 CPU 资源呢？
+     * 在messagequeue中没有消息时，主线程会释放CPU资源进入休眠状态，当有下个消息到达时候，通过往pipe管道写端口写入数据来唤醒休眠的线程。这里采用IO多路复用，同时监控多个描述符，当某个描述符就绪(读或写就绪)，则立刻通知相应程序进行读或写操作，所以说，主线程大多数时候都是处于休眠状态，并不会消耗大量CPU资源。
+59. 自定义View的绘制
    * View树的绘制流程：measure（是否需要计算视图大小）——layout（是否需要视图位置）——draw（是否需要重绘）
    * measure：树的递归。从上到下有序遍历。根据父容器对子容器的测量规格的参数，获取子容器的长宽高，并返回父容器，然后进行统一的测量。
+   * 
 59. listview——动态滚动展示view
    * 适配器模式：数据驱动UI，根据数据绘制UI
    * recylerBin：内部类。屏幕可见放在内存中，其余放在recylerBin
@@ -350,7 +392,29 @@ Activity B：onDestroy
    * FragmentPagerAdapter与FragmentStatePagerAdapter的区别：
      * FragmentPagerAdapter：页面较少。因为在destroyitem的时候不会回收内存，只是将Fragment和UI进行分离
      * FragmentStatePagerAdapter：页面较多，在destroyitem的时候会回收内存
-  
+71. 广播
+  * 使用intent包装数据
+  * 本地广播使用handler实现
+  * 程序之间广播使用binder机制
+  * 实现广播-receiver
+    * 静态注册：注册完成后就一直运行。写在xml文件中，用<receive>进行注册
+    * 动态注册：跟随activity的生命周期。
+  * 内部实现机制
+    * 自定义广播接收者BroadcastReceiver，并复写onReceive（）方法
+    * 通过binder机制向AMS注册（Activity Manager Service）
+    * 广播发送者通过binder机制向AMS发送广播
+    * AMS查找符合相应（IntentFilter）条件的BroadcastReceiver，将广播发送到相应的BroadcastReceiver（一般是Activity）的相应的消息循环队列中
+    * 消息循环执行拿到此广播，回调BroadcastReceiver中的onReceive方法
+72. IntentService
+  * 继承自service的一个抽象类
+  * 内部通过HandlerThread和Handler来实现异步操作。
+  * 在IntentService内有一个工作线程来处理耗时操作
+  * 启动IntentService的方式和启动传统的Service一样，同时，当任务执行完后，IntentService会自动停止，而不需要我们手动去控制或调用stopSelf()。
+  * 可以启动IntentService多次，而每一个耗时操作会以工作队列的方式在IntentService的onHandleIntent回调方法中执行，并且，每次只会执行一个工作线程，执行完第一个再执行第二个。
+  * 可以处理耗时操作的原因
+    * 创建了HandlerThread，实例化一个Handler对象，传入的Looper是HandlerThread的Looper，所以可以执行耗时操作。
+
+
   
 
 
