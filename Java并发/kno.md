@@ -8,16 +8,78 @@
 #### 实现Runnable接口
 1. 定义一个类，实现runnable接口，重写run方法
 2. 使用runnable实例创建Thread实例，调用Thread的start的方法来启动线程。
+3. 无返回值，无法捕获异常处理。
+```java
+   public class MyRunnable implements Runnable {
+       public void run() {
+       // ...
+       }
+   }
+   public static void main(String[] args) {
+       MyRunnable instance = new MyRunnable();
+       Thread thread = new Thread(instance);
+       thread.start();
+   }
+```
 #### 实现Callable接口
 1. 定义一个类，实现Callable接口，重写run方法，有返回值
 2. 使用FutureTask封装返回值对象，然后用该对象创建Thread实例，最后调用Thread的start方法启动线程。
+```java
+   public class MyCallable implements Callable<Integer> {
+       public Integer call() {
+           return 123;
+       }
+   }
+   public static void main(String[] args) throws ExecutionException, InterruptedException {
+       MyCallable mc = new MyCallable();
+       FutureTask<Integer> ft = new FutureTask<>(mc);
+       Thread thread = new Thread(ft);
+       thread.start();
+       System.out.println(ft.get());
+   }
+```
 #### 继承Thread类
 1. 继承Thread类，实现run方法
 2. start方法启动线程
+```java
+   public class MyThread extends Thread {
+       public void run() {
+       // ...
+       }
+   }
+   public static void main(String[] args) {
+       MyThread mt = new MyThread();
+       mt.start();
+   }
+```
+#### 线程池
+1. Executors提供方法，实现ExecutorService接口。
+```java
+public class MyRunnable implements Runnable {
+    public void run() {
+    // ...
+    }
+}
+public static void main(String[] args) {
+    ExecutorService executorService = Executors.newSingleThreadExecutor();
+    MyRunnable runnableTest = new MyRunnable();
+    for (int i = 0; i < 5; i++) {
+        executorService.execute(runnableTest);
+    }
+    executorService.shutdown();
+}
+```
+#### run()和start()
+1. start()用于启动线程让线程进入就绪状态，只能调用一次，会自动执行run()；
+2. run()用于执行线程内部代码，类似main()下的普通方法，可重复调用，依赖于线程start()。
 #### 实现接口vs继承Thread
 实现接口会更好，因为可以继承多个接口，但是继承类，不仅不支持多重继承，还会使因为继承整个类而开销过大
 
 ## 二 基础线程机制
+#### 线程调度模型
+  * 分时调度：让所有线程轮流获得CPU使用权，平均分配时间片。
+  * 抢占式调度：让优先级高的线程抢占CPU，直到有更高优先级线程进入或线程任务运行。JVM默认。
+
 #### Executor
 1. 管理多个异步任务的执行，无需显式地管理线程的生命周期。
 2. CachedThreadPool：一个任务创建一个线程；
@@ -31,47 +93,80 @@
 4. main（）属于非守护线程
 5. 在线程启动之前使用setDaemon（）方法将一个线程设置为守护线程
 
-#### sleep（）
+#### sleep（）锁——暂停执行
 
 1. 休眠正在执行的线程，单位为毫秒。时间结束后退出。
 2.  可能会抛出 InterruptedException，因为异常不能跨线程传播回 main() 中，因此必须在本地进行处理。线程中抛出的其它异常也同样需要在本地进行处理
 3.  sleep使线程陷入睡眠状态，调用中断方法会使线程结束阻塞状态
 4.  sleep和wait方法的最大区别:sleep睡眠时会保持对象锁，仍然占有该锁，wait睡眠时释放对象锁。锁：控制同步访问。
+5.  Thread类的方法，让线程进入有限期等待休眠，之后自动苏醒。休眠不释放锁。常用于暂停执行。
 
-#### yield（）
+#### yield（）——cpu
 1. 静态方法，当线程重要部分完成后，调用yield方法就可以切换给其他线程执行
-2.   sleep 方法使当前运行中的线程睡眼一段时间，进入不可运行状态，这段时间的长短是由程序设定的，yield 方法使当前线程让出 CPU 占有权，但让出的时间是不可设定的。实际上，yield()方法对应了如下操作：先检测当前是否有相同优先级的线程处于同可运行状态，如有，则把 CPU  的占有权交给此线程，否则，继续运行原来的线程。所以yield()方法称为“退让”，它把运行机会让给了同等优先级的其他线程。
-3.   
+2. 让线程放弃当前获得的CPU，使线程仍处于Runnable，随时可以再获得CPU。只给相同优先级或更高优先级的线程机会。
+3.  sleep 方法使当前运行中的线程睡眼一段时间，进入不可运行状态，这段时间的长短是由程序设定的，yield 方法使当前线程让出 CPU 占有权，但让出的时间是不可设定的。
+4.  实际上，yield()方法对应了如下操作：先检测当前是否有相同优先级的线程处于同可运行状态，如有，则把 CPU  的占有权交给此线程，否则，继续运行原来的线程。所以yield()方法称为“退让”，它把运行机会让给了同等优先级的其他线程。
 
-## 三 中断
+## 三 线程之间的协作
+当多个线程一起工作时，存在线程的先后问题，因此需要协调
+#### join（）——全部
+1. 当前线程调用，其他线程全部停止，等待当前线程执行结束再执行
+
+#### wait（）——锁
+1. Object类的方法，与synchronized一起使用，
+2. 线程进入有限期或无限期等待，被notify方法调用才能解除阻塞，
+3. 只有重新占用互斥锁才能进入Runnable。休眠释放互斥锁。常用于线程间通信交互。
+4. wait(long timeout)超时后也会自动苏醒。
+#### wait（）notify（）notifyAll（）
+1. 调用 wait() 使得线程等待某个条件满足，线程在等待时会被挂起，当其他线程的运行使得这个条件满足时，其它线程会调用 notify() 或者 notifyAll() 来唤醒挂起的线程
+2. 属于object类，不属于线程类
+3. 只能在同步方法或者同步控制块中使用
+4. 使用wait方法时，会释放锁，不然其他线程无法进入对象的同步方法或者同步控制块中，从而无法唤醒。
+5. 对比：wait是object的方法，sleep是thread的方法。wait会释放锁，sleep不会释放锁。
+6. notify()：唤醒一个线程。
+7. notifyAll()：唤醒所有线程，参与锁竞争，失败就留在池中等待下次唤醒。
+ #### await（）signal（）signalAll（）
+ 1. Condition类可以实现线程之间的协调
+ 2. await方法使线程等待，其他线程调用signal或signalAll来唤醒等待的线程
+ 3. 对比：await这种等待方式可以指定等待的条件
+
+## 四 中断
 在运行过程中发生异常会提前结束
+#### 停止运行线程方法
+1. 退出标志，让线程正常退出；
+2. stop()/suspend()强制终止；
+3. interrupt()中断线程，但仅是把逻辑状态设置为中断，不会停止线程，需要后续处理。
 #### InterruptedException
 1. 阻塞状态——线程失去CPU使用权，直到进入就绪状态才有机会转到运行状态
 * 等待阻塞：运行的线程执行wait（）方法，jvm将线程放入等待池中
 * 同步阻塞：运行的线程在获取对象的同步锁时，若锁被别的线程占用，则jvm将线程放入锁池中
 * 其他阻塞：运行的线程执行sleep（）或者join（）方法，或者发出了IO请求时，jvm将线程设置为阻塞。
-2. interrupt(): 不要以为它是中断某个线程！它只是线线程发送一个中断信号，让线程在无限等待时（如死锁时）能抛出，从而结束线程，但是如果你吃掉了这个异常，那么这个线程还是不会中断的！
+2. interrupt(): 不要以为它是中断某个线程！它只是线线程发送一个中断信号，让线程在无限等待时（如死锁时）能抛出，从而结束线程，但是如果你吃掉了这个异常，那么这个线程还是不会中断的！中断线程。调用该方法后，线程状态被置为中断，不会停止线程，抛出中断异常。
 3. 通过调用一个线程的 interrupt() 来中断该线程，如果该线程处于阻塞、限期等待或者无限期等待状态，那么就会抛出 InterruptedException，从而提前结束该线程。但是不能中断 I/O 阻塞和 synchronized 锁阻塞（死锁只有在获得锁才能结束阻塞）
 4. 如果一个线程处于了阻塞状态（如线程调用了thread.sleep、thread.join、thread.wait、1.5中的condition.await、以及可中断的通道上的 I/O 操作方法后可进入阻塞状态），则在线程在检查中断标示时如果发现中断标示为true，则会在这些阻塞方法（sleep、join、wait、1.5中的condition.await及可中断的通道上的 I/O 操作方法）调用处抛出InterruptedException异常
 #### interrupted（）
 1. 如果run方法无限循环，并且没有执行sleep方法等可以抛出异常的操作，interrupt方法就无法使线程提前结束
 2. 调用 interrupt() 方法会设置线程的中断标记，此时调用 interrupted() 方法会返回 true。因此可以在循环体中使用 interrupted() 方法来判断线程是否处于中断状态，从而提前结束线程。
 #### 对比
-1. interrupt方法用于中断线程，调用该方法将线程的状态设置为“中断”状态，仅仅是设置中断状态位，不会中断，设置中断状态位后悔抛出中断异常
+1. interrupt方法用于中断线程，调用该方法将线程的状态设置为“中断”状态，仅仅是设置中断状态位，不会中断，设置中断状态位后悔抛出中断异常.中断线程。调用该方法后，线程状态被置为中断，不会停止线程，抛出中断异常。
 2. interrupt（）是用来设置中断状态的。返回true说明中断状态被设置了而不是被清除了。我们调用sleep、wait等此类可中断（throw InterruptedException）方法时，一旦方法抛出InterruptedException，当前调用该方法的线程的中断状态就会被jvm自动清除了，就是说我们调用该线程的isInterrupted 方法时是返回false。如果你想保持中断状态，可以再次调用interrupt方法设置中断状态。这样做的原因是，java的中断并不是真正的中断线程，而只设置标志位（中断位）来通知用户。如果你捕获到中断异常，说明当前线程已经被中断，不需要继续保持中断位
 3. interrupt方法：设置一个中断状态，线程仍然会继续运行。对于正在运行的普通代码，不会抛出异常，对于处于wait/sleep/join的线程，调用interrupt方法会打破线程的暂停状态抛出异常，用户可以选择return来结束线程。
-4. interrupted：测试当前是否被中断（检查中断状态），返回一个boolean并清除中断状态
-5. isinterrupted：测试此线程是否被中断，不清楚中断状态
+4. interrupted：测试当前是否被中断（检查中断状态），返回一个boolean并清除中断状态.是静态方法，检查当前中断状态，并清除中断状态。如果一个线程被中断了，第一次调用 interrupted 则返回 true，第二次和后面的就返回 false 了。
+5. isinterrupted：查看当前线程的中断状态，不清除状态。
 
-#### Executor的中断状态
-1. 调用shutdown方法会等待线程都执行关闭后再关闭
-2. 调用shutdownNow方法相当于调用每个线程的interrupt方法
-3. 如果只想中断 Executor 中的一个线程，可以通过使用 submit() 方法来提交一个线程，它会返回一个 Future<?> 对象，通过调用该对象的 cancel(true) 方法就可以中断线程
 
-## 四 互斥同步
+## 五 互斥同步
 多个线程对共享资源的互斥访问。
 *  jvm实现的synchronized
 * jdk实现的ReentrantLock
+#### 线程同步方式
+* 同步方法。用synchronized修饰的方法。
+* 同步代码块。用synchronized修饰的语句块。
+* 用volatile修饰变量。
+* 可重入锁。
+* ThreadLocal管理变量副本。
+* 阻塞队列。
+* 原子类。
 #### synchronized（不可中断、不公平）
 1. 同步一个代码块
 * 只作用于一个对象，如果调用两个对象上的同步代码块，不会进行同步
@@ -90,29 +185,16 @@
 4.  锁绑定多个条件一个 ReentrantLock 可以同时绑定多个 Condition 对象。
 #### 使用选择
 优先使用synchronized，因为jvm原生支持，并且不用担心死锁问题，因为jvm会确保锁的释放
-## 五 线程之间的协作
-当多个线程一起工作时，存在线程的先后问题，因此需要协调
-#### join（）
-1. 在线程中调用另一个线程的join方法，会把当前线程挂起，当被调用的线程执行完毕后退出等待。
-#### wait（）notify（）notifyAll（）
-1. 调用 wait() 使得线程等待某个条件满足，线程在等待时会被挂起，当其他线程的运行使得这个条件满足时，其它线程会调用 notify() 或者 notifyAll() 来唤醒挂起的线程
-2. 属于object类，不属于线程类
-3. 只能在同步方法或者同步控制块中使用
-4. 使用wait方法时，会释放锁，不然其他线程无法进入对象的同步方法或者同步控制块中，从而无法唤醒。
-5. 对比：wait是object的方法，sleep是thread的方法。wait会释放锁，sleep不会释放锁。
- #### await（）signal（）signalAll（）
- 1. Condition类可以实现线程之间的协调
- 2. await方法使线程等待，其他线程调用signal或signalAll来唤醒等待的线程
- 3. 对比：await这种等待方式可以指定等待的条件
 ## 六 线程状态
 线程状态指的是java虚拟机中的线程状态
 
 1. 新建（New）——创建后尚未启动
 2. 可运行（Runable）——虚拟机中：在运行。os中——运行或者等待调度中，完成资源调度后进入运行状态
-3. 阻塞（Blocked）——属于被动，请求锁进入同步函数或者代码块的时候因为其他线程已经占用而处于阻塞状态。当获得锁后可以进入运行状态
-4. 无限期等待(Waiting)——属于主动，调用wait方法（notify）或者join方法（执行完毕）进入等待状态，然后等待其他线程显式的唤醒。
-5. 限期等待（Timed_Waiting）——调用sleep（时间到）、wait（notify）、join方法（执行完毕）进入等待状态，不等待其他线程显式的唤醒，在一定时间后被系统自动唤醒。
-6. 死亡（Terminated）——线程任务结束后自己退出或者产生异常结束。
+3. 阻塞等待
+   * 阻塞（Blocked）——属于被动，线程进入同步块中，需要申请一个同步锁而进行的等待当获得锁后可以进入运行状态
+   * 无限期等待(Waiting)——属于主动，调用Object.wait方法（Object.notify）或者join方法（执行完毕）进入等待状态，然后无限期等待其他线程来唤醒
+   * 限期等待（Timed_Waiting）——调用Thread.sleep（时间到）进入等待状态，不等待其他线程显式的唤醒，在一定时间后被系统自动唤醒。等待时间是明确的
+5. 死亡（Terminated）——线程任务结束后自己退出或者产生异常结束。
 ## 七 JUC—AQS
 java.util.concurrent（J.U.C）大大提高了并发性能，AQS 被认为是 J.U.C 的核心
 #### CountDownLatch
