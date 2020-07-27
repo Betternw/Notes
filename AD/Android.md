@@ -4785,11 +4785,12 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
 6. 全局配置搭建
 * 配置管理器（mall.library/global/Configurator）
    * 获取全局的存储容器变量
+   * 全局的单例模式
    * 访问服务器端API设置
    * 结束配置——进行一些回收动作，检查配置是否完成；配置完成后得到数据
 * 存储配置的容器（mall.library/utilstorage/MemoryStore)
    * 以内存级别存储，当被序列化到xml或者数据库中后，在配置或者远程网络变化时也能及时更改响应
-   * 线程安全的单例模式，内部类或者双重校验锁
+   * 全局的类最好是线程安全的单例模式，内部类或者双重校验锁
    * 以HashMap的数据结构存储数据
 * 枚举类的类型存储数据变量（mall.library/global/GlobalKeys）
 * 访问配置器的类（mall.library/global/Mall）
