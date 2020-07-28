@@ -1,14 +1,14 @@
 ## 一 数据类型
 #### 基本类型
 
-* byte/8
-* char/16
-* short/16
-* int/32
-* float/32
-* long/64
-* double/64
-* boolean/~
+* byte/8：1字节
+* char/16：2字节
+* short/16：2字节
+* int/32：4字节
+* float/32：4字节
+* long/64：8字节
+* double/64：8字节
+* boolean/~：1字节
 #### 包装类型
 1. 基本类型与其对应的包装类型之间使用自动装箱和拆箱完成
 2. 装箱：Integer.valueOf
