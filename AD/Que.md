@@ -207,7 +207,25 @@ Activity B：onDestroy
 * ContentObserver：观察ContentProvider中的数据变化，并将变化通知给外界。
 44. HandlerThread
 * HandlerThread有自己的内部Looper对象，可以进行loopr循环。当有耗时任务进入队列时，则不需要开启新线程，在原有的线程中执行耗时任务即可
-45. 通信
+* 本质上是一个在子线程的handler (HandlerThread=Handler+Thread);
+* 是通过获取thread的looper，来初始化Handler
+* HandlerThread 的具体使用场景是 IntentService。IntentService 封装了 HandlerThread 和 Handler 。HandlerThread 主要用来处理需要顺序执行的异步操作。
+```java
+HandlerThread mHandlerThread = new HandlerThread("mHandlerThread");
+mHandlerThread .start();
+ Handler mHandler= new Handler( mHandlerThread.getLooper() ) {
+           @Override
+           public boolean handleMessage(Message msg) {
+               //消息处理
+               return true;
+           }
+     });
+ Message  message = Message.obtain();
+     message.what = “2”
+     mHandler.sendMessage(message);
+    mHandlerThread.quit()；
+```
+1.  通信
     * Android中跨进程通讯的几种方式
       * Content Provider 
       * 广播：使用intent携带数据
@@ -227,7 +245,7 @@ Activity B：onDestroy
        * 在Fragment中调用Fragment的方法：findFragmentByID
     * 跨进程调用自定义Service有两种方式：Messager和AIDL。要让两个不同的进程之间进行函数调用，就要使用进程间通信IPC，这两种方式都使用了IPC技术。在安卓系统当中，它实际上是由Binder来实现的。
        * ALDL：定义一个文件，将service要提供给其他进程使用的接口函数定义在里面。创建一个service类，实现刚才类定义的binder。另一个应用创建serviceconnection，绑定servicec后得到返回的binder。
-46. 显示Intent与隐式Intent的区别
+2.  显示Intent与隐式Intent的区别
 * 明确指出了目标组件名称的Intent，我们称之为“显式Intent” 没有明确指出目标组件名称的Intent，则称之为“隐式 Intent”。
 47. Kotlin 特性，和 Java 相比有什么不同的地方?
    * 能直接与Java相互调用
@@ -423,7 +441,7 @@ Activity B：onDestroy
 72. IntentService
   * 继承自service的一个抽象类
   * 内部通过HandlerThread和Handler来实现异步操作。
-  * 在IntentService内有一个工作线程来处理耗时操作
+  * 在IntentService内有一个工作线程来处理耗时操作，主要是里面onHandleIntent()方法
   * 启动IntentService的方式和启动传统的Service一样，同时，当任务执行完后，IntentService会自动停止，而不需要我们手动去控制或调用stopSelf()。
   * 可以启动IntentService多次，而每一个耗时操作会以工作队列的方式在IntentService的onHandleIntent回调方法中执行，并且，每次只会执行一个工作线程，执行完第一个再执行第二个。
   * 可以处理耗时操作的原因
