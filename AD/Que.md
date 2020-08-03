@@ -412,7 +412,9 @@ mHandlerThread .start();
              * fragmentTransction.add(fragment的id)
            * 调用commit方法使得FragmentTransction实例的改变生效
              * transction.commit（）
-   * Fragment跳转：使用activity的fragmenttransation的replace方法替换
+   * Fragment跳转：
+     * 使用activity的fragmenttransation的replace方法替换，会覆盖掉原来的页面，存在生命周期的流程。replace是会替换掉原有的，所以这种方式的FrameLayout是只有一层的，
+     * 使用add+hide+show，将原来的页面隐藏，不走生命周期流程。add是一层层添加上去的，通过show去显示当前界面，hide去隐藏其他的界面，这时候的FrameLayout是会有很多层的。
    * Activity跳转：使用intent和bundle
        * 显示intent：Intent intent = new Intent(MainActivity.this,SecondActivity.class);startActivity(intent);
        * 隐式intent
