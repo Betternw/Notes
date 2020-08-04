@@ -26,3 +26,23 @@
     * AIDL代理模式：
       * 为其他对象提供一种代理以控制对这个对象的访问。当无法或不想直接访问某个对象或访问某个对象存在困难时可以通过一个代理对象来间接访问，为了保证客户端使用的透明性，委托对象与代理对象需要实现相同的接口。
     * ListView/RecyclerView/GridView的适配器模式：
+7. 单例模式
+```java
+public class Singleton{
+  private volatile static Singleton instance;
+  private Singleton(){
+
+  }
+  private static Singleton getInstance(){
+    if(instance==null){
+      synchronized(Singleton.class){
+        if(instance==null){
+          instance = new Singleton();
+        }
+      }
+    }
+    return instance;
+  }
+
+}
+```

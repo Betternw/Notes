@@ -74,6 +74,9 @@
     * 因此对于Java编程者来说，不需要考虑硬件平台是什么。所以Java可以跨平台。
 15. final，finally，finalize的区别？
     * final 可以用来修饰类、方法、变量，分别有不同的意义，final 修饰的 class 代表不可以继承扩展，final 的变量是不可以修改的，而 final 的方法也是不可以重写的（override）。
+      * 被final修饰的变量，不可变的是变量的引用，而不是变量的内容
+      * 用了map、list、数组、StringBuilder 、StringBuffer .它们的内容是可以修改的。但是不可以修改指向他们的引用
+      * https://www.zhihu.com/question/20618891
     * finally 则是 Java 保证重点代码一定要被执行的一种机制。我们可以使用 try-finally 或者 try-catch-finally 来进行类似关闭 JDBC 连接、保证 unlock 锁等动作。
     * finalize 是基础类 java.lang.Object 的一个方法，它的设计目的是保证对象在被垃圾收集前完成特定资源的回收.比如关闭文件描述符（操作系统有限的资源）.
 16. Java中对象的生命周期
@@ -188,4 +191,25 @@
       * 栈大小设置太小——可以通过虚拟机参数-Xss来设置栈的大小。
 34. 栈和堆
     * 栈中存放基本类型数据 a 10
-    * 栈中存放堆的对象的地址，指针指向堆，堆中存放对象
+    * 栈中存放堆的对象的引用，指针指向堆，堆中存放对象
+35. String
+    * final修饰的变量，是说引用地址不能改变。
+```java
+final int[] value = {1,2,3};
+int []another = {4,5,6};
+value = another;//报错。final不可变
+value[2] = 100;//value = {1,2,100}
+```
+   * 构造方法创建的字符串，存储在堆中。String s1=new String("hello")
+   * 直接赋值创建的字符串对象，存储在方法区的常量池中。String s2="hello"
+   * 给一个已经创建的字符串重新赋值，栈中的引用会指向重新开辟的堆的内存空间
+```java
+        String a = new String("hello");
+        String b = a;
+        System.out.println("s1==s2:"+(a==b)); //true.b指向a
+        a=null;
+        System.out.println("s1==s2:"+(a==b)); // false,创建了新的a，b还指向原本的a
+        System.out.println(b);
+        System.out.println(a);
+```
+   * https://www.cnblogs.com/long-holiday/p/10246161.html
