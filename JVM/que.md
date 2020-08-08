@@ -42,6 +42,15 @@
          * 新生代内存按照8:1:1的比例分为一个eden区和两个survivor(survivor0,survivor1)区。大部分对象在Eden区中生成。回收时先将eden区存活对象复制到一个survivor0区，然后清空eden区，当这个survivor0区也存放满了时，则将eden区和survivor0区存活对象复制到另一个survivor1区，然后清空eden和这个survivor0区，此时survivor0区是空的，然后将survivor0区和survivor1区交换，即保持survivor1区为空， 如此往复。
          * 当survivor1区不足以存放 eden和survivor0的存活对象时，就将存活对象直接存放到老年代。若是老年代也满了就会触发一次Full GC，也就是新生代、老年代都进行回收。
          * 新生代发生的GC也叫做Minor GC，MinorGC发生频率比较高
+         * 为什么设置了eden区还要设置survivor区？
+           * 没有Survivor，Eden区每进行一次Minor GC，存活的对象就会被送到老年代。
+           * Survivor的存在意义，就是减少被送到老年代的对象，进而减少Full GC的发生，Survivor的预筛选保证，只有经历16次Minor GC还能在新生代中存活的对象，才会被送到老年代。
+         * 为什么要设置两个survivor区
+           * 空间利用率问题：只有一个survivor的话，如果是8比2，多次gc后s区的剩余空间很容易满，如果是1比1，一半闲置，空间利用率低。但是如果 Survivor 分区有 2 个分区，我们就可以把 Eden、From Survivor、To Survivor 分区内存比例设置为 8:1:1 ，那么任何时候新生代内存的利用率都 90% ，这样空间利用率基本是符合预期的。
+           * 内存碎片化问题：在发生多次的gc时，一个s区本身的存活对象和从eden区中复制来的存活对象，会造成内存碎片。而两个s区，永远有一个survivor space是空的，另一个非空的survivor space无碎片。（采用的复制算法会保证S1中来自S0和Eden两部分的存活对象占用连续的内存空间）
+           * https://blog.csdn.net/antony9118/article/details/51425581
+         * 为什么不能多个？
+           * 如果Survivor区再细分下去，每一块的空间就会比较小，很容易导致Survivor区满，
        * 老年代：
          * 在老年代中经历了N次垃圾回收后仍然存活的对象，就会被放到老年代中。因此，可以认为老年代中存放的都是一些生命周期较长的对象。
          * 内存比新生代也大很多(大概比例是1:2)，当老年代内存满时触发Major GC，即Full GC。Full GC发生频率比较低，老年代对象存活时间比较长。
