@@ -147,13 +147,14 @@ bind的方式开启服务，绑定服务，调用者挂了，服务也会跟着�
    * 适合于大型项目、业务逻辑复杂、需求变更频繁
 * MVP
    * 在MVP中View并不直接使用Model，它们之间的通信是通过Presenter(MVC中的Controller)来进行的，所有的交互都发生在Presenter内部，而在MVC中View会从直接Model中读取数据而不是通过Controller。
-   * MVP彻底解决了MVC中View和Controller分不清楚的问题（View功能有限，会放到controcller中）。在该模式中，视图通常由表示器初始化，但不对用户的输入作任何逻辑处理，而仅仅是将用户输入转发给表示器。通常每一个视图对应一个表示器，但是也可能一个拥有较复杂业务逻辑的视图会对应多个表示器，每个表示器完成该视图的一部分业务处理工作，降低了单个表示器的复杂程度，
+   * MVP彻底解决了MVC中View和Controller分不清楚的问题（View功能有限，会放到controcller中，Activity既像View又像Controller）。
+   * 在该模式中，视图通常由表示器初始化，但不对用户的输入作任何逻辑处理，而仅仅是将用户输入转发给表示器。通常每一个视图对应一个表示器，但是也可能一个拥有较复杂业务逻辑的视图会对应多个表示器，每个表示器完成该视图的一部分业务处理工作，降低了单个表示器的复杂程度，
    * 但是随着业务逻辑的增加，一个页面可能会非常复杂，UI的改变是非常多，会有非常多的case，这样就会造成View的接口会很庞大。
    * View的xml文件功能有限，Activity中不仅处理业务逻辑还要处理操作UI。因此controcller会很厚重
    * M：业务逻辑和实体逻辑
    * V：Activity，负责view的绘制和用户的交互
    * P：负责完成View与Model之间的交互
-   * View和Model不直接交互。通过presenter层进行交互
+   * View和Model不直接交互。通过presenter层进行交互，耦合度更低，
    * 
 * MVVM
    * view  viewmodel model，后两者双向交互
@@ -357,7 +358,7 @@ mHandlerThread .start();
    * binder
      * 跨进程通信，客户端和服务端之间通信
      * Android使用Linux内核，通信方式有：socket、binder、管道
-     * 性能更好，binder比socket更高效
+     * 性能更好，binder比socket更高效。Binder数据拷贝只需要一次，而管道、消息队列、Socket都需要2次，共享内存方式一次内存拷贝都不需要，但实现方式又比较复杂。
      * 安全性更高，socket是ip地址手动填写，会有安全性问题。binder要进行通信双方信息校验，所以更安全
      * 通信模型步骤
        * 建立serviceManager，相当于通信录，
@@ -368,6 +369,7 @@ mHandlerThread .start();
        * client查询是否有目标方法，
        * manage返回方法的代理对象，这个方法内部是空的，client可以进行调用
        * 当client调用代理对象的时候，返回binder驱动，binder驱动就会去调用server的方法，将结果返回给manage再返回给client。
+       * 整个的调用过程是一个同步过程，在Server处理的时候，Client会Block住。因此Client调用过程不应在主线程。
      * 对于server端来说，binder是本地对象。对于client来说，binder是代理对象
    * binder例子
      * ALDL
@@ -483,7 +485,16 @@ mHandlerThread .start();
   * 缓存
     * 主线程 public Map<String, SoftReference<Drawable>> imageCache = new HashMap<String, SoftReference<Drawable>>();
     * 如果有缓存则读取缓存中数据，如果没有，则从网络获取数据
-  
-
+  * 用默认图片时
+    * 将图片缓存起来，需要的时候直接从内存中读取。但是，由于图片占用内存空间比较大，缓存很多图片需要很多的内存，就可能比较容易发生OutOfMemory异常。这时，我们可以考虑使用软/弱引用技术来避免这个问题发生。
+    * 定义一个HashMap，保存软引用对象。
+    * 保存Bitmap的软引用到HashMap
+    * 使用软引用以后，在OutOfMemory异常发生之前，这些缓存的图片资源的内存空间可以被释放掉的，从而避免内存达到上限，避免Crash发生。
+    * 另外可以根据对象是否经常使用来判断选择软引用还是弱引用。如果该对象可能会经常使用的，就尽量用软引用。如果该对象不被使用的可能性更大些，就可以用弱引用。
+76. 内存泄露
+  * 用HashMap做一些数据的存储和缓存时，没有删除元素
+  * 单例造成的内存泄露，比如一些需要传入参数是context，如果是Activity的context，由于该 Context 的引用被单例对象所持有，其生命周期等于整个应用程序的生命周期，所以当前 Activity 退出时它的内存并不会被回收，这就造成泄漏了。
+  * 非静态内部类创建静态实例造成的内存泄漏
+  * Handler 造成的内存泄漏——使用静态内部类 + WeakReference
 
 
