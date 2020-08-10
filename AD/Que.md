@@ -287,6 +287,8 @@ mHandlerThread .start();
       * Handler 发送的消息由 MessageQueue 存储管理，并由 Looper 负责回调消息到 handleMessage()。
    * 内存泄露：
      * 非静态内部类引用了外部类的引用。handler没有被释放，持有的引用没有必要释放，会内存释放——设置为静态内部类，在类内持有外部类的弱引用（弱引用也是用来描述非必需对象的，当JVM进行垃圾回收时，无论内存是否充足，都会回收被弱引用关联的对象）
+       * 静态内部类不依赖于外部类实例被实例化。而通常的内部类需要在外部类实例化后才能实例化。普通的内部类对象隐含地保存了一个引用，指向创建它的外围类对象。然而，当内部类是static的时，就不是这样了。
+       * 静态内部类不含有外部类的引用，所以不能访问外部类的非静态成员和方法。
      * Handler 引起的内存泄露原因以及最佳解决方案——当Handler消息队列 还有未处理的消息 / 正在处理消息时，存在引用关系： “未被处理 / 正处理的消息Message持有Handler实例的引用，handler又持有外部类的引用。——将 Handler 定义成静态的内部类，在内部持有 Activity 的弱引用，
    * Looper循环为什么不会导致应用卡死
      * 因为死循环的作用是保证不断循环，主线程可以一直处于运行状态。通过loop循环遍历MessageQueue,然后通过H handler类的handleMessage方法去处理activity相关的start、pause、stop、destroy等各类事件。真正卡死主线程操作的是在回调方法onCreate、onStart、onResume等操作时间过长，会导致掉帧甚至ANR，Looper.loop()本身不会导致应用卡死。
