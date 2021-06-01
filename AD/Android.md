@@ -371,22 +371,23 @@ seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 1. 一个页面就是一个Activity
 2. 启动那个Activity，哪个注册intent-filter
 3. Activity跳转：使用Intent
-4. aaaa
 ```java
 //Activity跳转
 Intent intent = new Intent(ButtonActivity.this,ProgressBarActivity.class);
 startActivity(intent);
 ```
-1. Activity启动模式——standard
-* 默认是这个，按照顺序
-5. Activity启动模式——singleTop
-* 顶部复用，新打开一个会在栈上面重新打开一个，底部的还留着
-6. Activity启动模式——singleTask
-* 如果复用Activity，会清除前面的
-7. Activity启动模式——singleInstance
-* 打开新的，会重新新建一个栈 
-8. 生命周期 on Create() on Start() onResume() onPause() onStop() onDestory() onRestart()
-9. Activity之间的数据传递
+4. 启动模式：
+   1. Activity启动模式——standard
+   * 默认是这个，按照顺序
+   2. Activity启动模式——singleTop
+   * 顶部复用，新打开一个会在栈上面重新打开一个，底部的还留着
+   3. Activity启动模式——singleTask
+   * 如果复用Activity，会清除前面的
+   4. Activity启动模式——singleInstance
+   * 打开新的，会重新新建一个栈 
+5. 生命周期 
+   1. on Create() on Start() onResume() onPause() onStop() onDestory() onRestart()
+6. Activity之间的数据传递
 * 使用intent
 ``` java
 //MainActivity中：
