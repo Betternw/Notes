@@ -371,6 +371,7 @@ seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 1. 一个页面就是一个Activity
 2. 启动那个Activity，哪个注册intent-filter
 3. Activity跳转：使用Intent
+4. 更新
 ```java
 //Activity跳转
 Intent intent = new Intent(ButtonActivity.this,ProgressBarActivity.class);
