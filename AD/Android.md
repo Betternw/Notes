@@ -368,7 +368,7 @@ seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 
 ### <span id = "4">常用组件</span>
 ### <span id = "5"> Activity</span>
-1. 一个页面就是一个Activity
+#### 1. 一个页面就是一个Activity
 2. 启动那个Activity，哪个注册intent-filter
 3. Activity跳转：使用Intent
 ```java
@@ -378,15 +378,22 @@ startActivity(intent);
 ```
 4. 启动模式：
    1. Activity启动模式——standard
-   * 默认是这个，按照顺序
+      * 默认是这个，按照顺序
    2. Activity启动模式——singleTop
-   * 顶部复用，新打开一个会在栈上面重新打开一个，底部的还留着
+      * 顶部复用，新打开一个会在栈上面重新打开一个，底部的还留着
    3. Activity启动模式——singleTask
-   * 如果复用Activity，会清除前面的
+      * 如果复用Activity，会清除前面的
    4. Activity启动模式——singleInstance
-   * 打开新的，会重新新建一个栈 
-5. 生命周期 
+      * 打开新的，会重新新建一个栈 
+5. 典型生命周期 
    1. on Create() on Start() onResume() onPause() onStop() onDestory() onRestart()
+   2. on Create() ：当 Activity 第一次创建时会被调用。做一些初始化工作：比如调用setContentView去加载界面布局资源，初始化Activity所需的数据，借助onCreate()方法中的Bundle对象来回复异常情况下Activity结束时的状态
+   3. onRestart()：表示Activity正在重新启动——Activity从不可见重新变为可见状态时。这种情形一般是用户行为导致的，比如用户按Home键切换到桌面或打开了另一个新的Activity，接着用户又回到了这个Actvity。
+   4. onStart(): 表示Activity正在被启动，即将开始，但是还没有出现在前台，无法与用户交互。这个时候可以理解为Activity已经显示出来，但是我们还看不到。——此时在后台
+   5. onResume():表示Activity已经可见了，并且出现在前台并开始活动。onStart的时候Activity在后台，onResume的时候Activity才显示到前台。
+   6. onPause():表示 Activity正在停止，仍可见，正常情况下，紧接着onStop就会被调用。在特殊情况下，如果这个时候快速地回到当前Activity，那么onResume就会被调用（极端情况）。onPause中不能进行耗时操作，会影响到新Activity的显示。因为onPause执行完，新的Activity的onResume才会执行。
+   7. onStop():表示Activity即将停止，不可见，位于后台。可以做稍微重量级的回收工作，同样不能太耗时。
+   8. onDestory():表示Activity即将销毁，这是Activity生命周期的最后一个回调，可以做一些回收工作和最终的资源回收。
 6. Activity之间的数据传递
 * 使用intent
 ``` java
