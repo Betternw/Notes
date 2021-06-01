@@ -371,13 +371,13 @@ seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 1. 一个页面就是一个Activity
 2. 启动那个Activity，哪个注册intent-filter
 3. Activity跳转：使用Intent
-4. 更新
+4. aaaa
 ```java
 //Activity跳转
 Intent intent = new Intent(ButtonActivity.this,ProgressBarActivity.class);
 startActivity(intent);
 ```
-4. Activity启动模式——standard
+1. Activity启动模式——standard
 * 默认是这个，按照顺序
 5. Activity启动模式——singleTop
 * 顶部复用，新打开一个会在栈上面重新打开一个，底部的还留着
