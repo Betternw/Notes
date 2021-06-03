@@ -377,17 +377,37 @@ seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 Intent intent = new Intent(ButtonActivity.this,ProgressBarActivity.class);
 startActivity(intent);
 ```
-#### 4. 启动模式：
-   1. Activity启动模式——standard
-      * 默认是这个，按照顺序
-   2. Activity启动模式——singleTop
-      * 顶部复用，新打开一个会在栈上面重新打开一个，底部的还留着
-   3. Activity启动模式——singleTask
-      * 如果复用Activity，会清除前面的
-   4. Activity启动模式——singleInstance
-      * 打开新的，会重新新建一个栈 
-#### 5. 生命周期 
-#### 典型生命周期
+#### 二. 启动模式：
+##### 1. 标准模式(standard)
+1. 默认是这个，按照顺序，每启动一次Activity就会创建一个新的实例并置于栈顶。
+2. 谁启动了新的Activity，就会运行在启动该Activity的栈中。例如：Activity A启动了Activity B，则就会在A所在的栈顶压入一个新的Activity。（5.0后会放入新的栈中，因为会属于不同的程序）
+3. 特殊情况，如果在Service或Application中启动一个Activity，其并没有所谓的任务栈，可以使用标记位Flag来解决。解决办法：为待启动的Activity指定FLAG_ACTIVITY_NEW_TASK标记位，创建一个新栈。
+4. 应用场景： 绝大多数Activity。如果以这种方式启动的Activity被跨进程调用，在5.0之前新启动的Activity实例会放入发送Intent的Task的栈的顶部，但是属于不同的程序，在5.0之后，上述情景会创建一个新的Task，新启动的Activity就会放入刚创建的Task中。
+##### 2. 栈顶复用模式（singleTop）
+1. 如果需要新建的Activity位于栈顶，不需要重新新建这个Activity以及回调其他声明周期方法，会重用栈顶实例，并回调onNewIntent方法。
+2. 如果栈顶不是新建的Activity,就会创建该Activity新的实例，并放入栈顶。
+3. 应用场景：在通知栏点击收到的通知，然后需要启动一个Activity，这个Activity就可以用singleTop，否则每次点击都会新建一个Activity。同standard模式，如果是外部程序启动singleTop的Activity，在Android 5.0之前新创建的Activity会位于调用者的Task中，5.0及以后会放入新的Task中。
+##### 3. 栈内复用模式（singleTask）
+1. 单例模式，一个栈内只有一个该Activity实例。
+2. 在AndroidManifest文件的Activity中指定该Activity需要加载到那个栈中，即singleTask的Activity可以指定想要加载的目标栈。singleTask和taskAffinity配合使用，指定开启的Activity加入到哪个栈中。
+   ``` java
+        <activity android:name=".Activity1"
+            android:launchMode="singleTask"
+            android:taskAffinity="com.lvr.task"
+            android:label="@string/app_name">
+        </activity>
+   ```
+3. taskAffinity：每个Activity都有taskAffinity属性，指明了需要进入的Task。如果一个Activity没有显式的指明该Activity的taskAffinity，那么它的这个属性就等于Application指明的taskAffinity，如果Application也没有指明，那么该taskAffinity的值就等于包名。
+4. 执行逻辑：
+* 如果Activity指定的栈不存在，则创建一个栈并将创建的Activity压入栈中。
+* 如果指定的栈存在，且其中没有该Activity实例，会创建并压入栈顶。
+* 如果指定的栈存在，但是其中有该Activity实例，则把该Activity实例之上的Activity杀死清除出栈，重用该实例并让该Activity实例处在栈顶，然后调用onNewIntent()方法。
+1. 应用场景：大多数App的主页。当我们第一次进入主界面之后，主界面位于栈底，以后不管我们打开了多少个Activity，只要我们再次回到主界面，都应该将主界面Activity上所有的Activity移除，来让主界面Activity处于栈顶，而不是往栈顶新加一个主界面Activity的实例，通过这种方式能够保证退出应用时所有的Activity都能报销毁。在跨应用Intent传递时，如果系统中不存在singleTask Activity的实例，那么将创建一个新的Task，然后创建SingleTask Activity的实例，将其放入新的Task中。
+##### 4. 单例模式（singleInstance）
+1. 打开该Activity时，会直接创建一个新的任务栈，并创建该Activity实例放入新栈中。一旦该模式的Activity实例已经存在于某个栈中，任何应用再激活该Activity时都会重用该栈中的实例。
+2. 应用场景： 呼叫来电界面。这种模式的使用情况比较罕见，在Launcher中可能使用。或者你确定你需要使Activity只有一个实例。建议谨慎使用。
+#### 三. 生命周期 
+#### 1. 典型生命周期
    (1). on Create() on Start() onResume() onPause() onStop() onDestory() onRestart()
    (2). on Create() ：当 Activity 第一次创建时会被调用。做一些初始化工作：比如调用setContentView去加载界面布局资源，初始化Activity所需的数据，借助onCreate()方法中的Bundle对象来回复异常情况下Activity结束时的状态
    (3). onRestart()：表示Activity正在重新启动——Activity从不可见重新变为可见状态时。这种情形一般是用户行为导致的，比如用户按Home键切换到桌面或打开了另一个新的Activity，接着用户又回到了这个Actvity。
@@ -396,21 +416,21 @@ startActivity(intent);
    (6). onPause():表示 Activity正在停止，仍可见，正常情况下，紧接着onStop就会被调用。在特殊情况下，如果这个时候快速地回到当前Activity，那么onResume就会被调用（极端情况）。onPause中不能进行耗时操作，会影响到新Activity的显示。因为onPause执行完，新的Activity的onResume才会执行。
    (7). onStop():表示Activity即将停止，不可见，位于后台。可以做稍微重量级的回收工作，同样不能太耗时。
    (8). onDestory():表示Activity即将销毁，这是Activity生命周期的最后一个回调，可以做一些回收工作和最终的资源回收。
-#### 生命周期的普通和特殊情况
-##### 生命周期的普通情况
+#### 2. 生命周期的普通和特殊情况
+##### 2.1 生命周期的普通情况
 (1) 针对一个特定的Activity，第一次启动: create-start-resume
 (2) 用户打开新的Activiy的时候，上述Activity: pause-stop
 (3) 再次回到原Activity时: restart-start-resume
 (4) 按back键回退时: pause-stop-destroy
 (5) 按Home键切换到桌面后又回到该Actitivy: pause-stop-restart-start-resume
 (6) 调用finish()方法后，回调如下：onDestory()(以在onCreate()方法中调用为例，不同方法中回调不同，通常都是在onCreate()方法中调用)
-##### 生命周期的特殊情况
+##### 2.2 生命周期的特殊情况
 1. 横竖屏切换：
    * Activity会被终止后再重建，状态保存在bundle中。其中onCreate和onRestoreInstanceState方法来恢复Activity的状态的区别： onRestoreInstanceState回调则表明其中Bundle对象非空，不用加非空判断。onCreate需要非空判断。建议使用onRestoreInstanceState。
    * onPause()->onSaveInstanceState()-> onStop()->onDestroy()->onCreate()->onStart()->onRestoreInstanceState->onResume()
    * 避免横竖屏切换的重建：在AndroidManifest文件的Activity中指定configChanges属性，从而横竖屏切换的时候会直接调用onCreate方法中的onConfigurationChanged方法，而不会重新执行onCreate方法，那当然如果不配置这个属性的话就会重新调用onCreate方法了
    ```java
-   android:configChanges = "orientation| screenSize"
+    android:configChanges = "orientation| screenSize"
    ```
 2. 资源内存不足导致优先级低的Activity被杀死
 * 前台Activity——正在和用户交互的Activity，优先级最高。
@@ -418,7 +438,7 @@ startActivity(intent);
 * 后台Activity——已经被暂停的Activity，比如执行了onStop，优先级最低。
 * 当系统内存不足时，会按照上述优先级从低到高去杀死目标Activity所在的进程。这种情况下数组存储和恢复过程和上述情况一致，生命周期情况也一样。
 
-#### 6. Activity之间的数据传递
+#### 四. Activity之间的数据传递
 * 使用intent
 ``` java
 //MainActivity中：
