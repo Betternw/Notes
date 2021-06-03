@@ -368,9 +368,10 @@ seekBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 
 ### <span id = "4">常用组件</span>
 ### <span id = "5"> Activity</span>
-#### 1. 一个页面就是一个Activity
-#### 2. 启动那个Activity，哪个注册intent-filter
-#### 3. Activity跳转：使用Intent
+#### 一. 
+1. 一个页面就是一个Activity
+2. 启动那个Activity，哪个注册intent-filter
+3. Activity跳转：使用Intent
 ```java
 //Activity跳转
 Intent intent = new Intent(ButtonActivity.this,ProgressBarActivity.class);
@@ -385,7 +386,8 @@ startActivity(intent);
       * 如果复用Activity，会清除前面的
    4. Activity启动模式——singleInstance
       * 打开新的，会重新新建一个栈 
-#### 5. 典型生命周期 
+#### 5. 生命周期 
+#### 典型生命周期
    (1). on Create() on Start() onResume() onPause() onStop() onDestory() onRestart()
    (2). on Create() ：当 Activity 第一次创建时会被调用。做一些初始化工作：比如调用setContentView去加载界面布局资源，初始化Activity所需的数据，借助onCreate()方法中的Bundle对象来回复异常情况下Activity结束时的状态
    (3). onRestart()：表示Activity正在重新启动——Activity从不可见重新变为可见状态时。这种情形一般是用户行为导致的，比如用户按Home键切换到桌面或打开了另一个新的Activity，接着用户又回到了这个Actvity。
@@ -394,7 +396,29 @@ startActivity(intent);
    (6). onPause():表示 Activity正在停止，仍可见，正常情况下，紧接着onStop就会被调用。在特殊情况下，如果这个时候快速地回到当前Activity，那么onResume就会被调用（极端情况）。onPause中不能进行耗时操作，会影响到新Activity的显示。因为onPause执行完，新的Activity的onResume才会执行。
    (7). onStop():表示Activity即将停止，不可见，位于后台。可以做稍微重量级的回收工作，同样不能太耗时。
    (8). onDestory():表示Activity即将销毁，这是Activity生命周期的最后一个回调，可以做一些回收工作和最终的资源回收。
-6. Activity之间的数据传递
+#### 生命周期的普通和特殊情况
+##### 生命周期的普通情况
+(1) 针对一个特定的Activity，第一次启动: create-start-resume
+(2) 用户打开新的Activiy的时候，上述Activity: pause-stop
+(3) 再次回到原Activity时: restart-start-resume
+(4) 按back键回退时: pause-stop-destroy
+(5) 按Home键切换到桌面后又回到该Actitivy: pause-stop-restart-start-resume
+(6) 调用finish()方法后，回调如下：onDestory()(以在onCreate()方法中调用为例，不同方法中回调不同，通常都是在onCreate()方法中调用)
+##### 生命周期的特殊情况
+1. 横竖屏切换：
+   * Activity会被终止后再重建，状态保存在bundle中。其中onCreate和onRestoreInstanceState方法来恢复Activity的状态的区别： onRestoreInstanceState回调则表明其中Bundle对象非空，不用加非空判断。onCreate需要非空判断。建议使用onRestoreInstanceState。
+   * onPause()->onSaveInstanceState()-> onStop()->onDestroy()->onCreate()->onStart()->onRestoreInstanceState->onResume()
+   * 避免横竖屏切换的重建：在AndroidManifest文件的Activity中指定configChanges属性，从而横竖屏切换的时候会直接调用onCreate方法中的onConfigurationChanged方法，而不会重新执行onCreate方法，那当然如果不配置这个属性的话就会重新调用onCreate方法了
+   ```java
+   android:configChanges = "orientation| screenSize"
+   ```
+2. 资源内存不足导致优先级低的Activity被杀死
+* 前台Activity——正在和用户交互的Activity，优先级最高。
+* 可见但非前台Activity——比如Activity中弹出了一个对话框，导致Activity可见但是位于后台无法和用户交互。
+* 后台Activity——已经被暂停的Activity，比如执行了onStop，优先级最低。
+* 当系统内存不足时，会按照上述优先级从低到高去杀死目标Activity所在的进程。这种情况下数组存储和恢复过程和上述情况一致，生命周期情况也一样。
+
+#### 6. Activity之间的数据传递
 * 使用intent
 ``` java
 //MainActivity中：
