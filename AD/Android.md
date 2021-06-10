@@ -4684,12 +4684,29 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
    * 导入后，右键 Generate ButterKnife Injections，可以自动声明viewholder方法
 ## <span id = "33">高级应用</span>
 ###  <span id = "34">Service</span>
+### 一. Service简介
 1. 相当于没有界面的Activity，四大组件之一。
 2. 用于在后台处理耗时操作，比如下载、音乐播放
 3. 不受Activity生命周期影响
-4. 生命周期
+4. 运行在UI线程中，不要在Service中执行耗时的操作，除非你在Service中创建了子线程来完成耗时操作。
+
+### 二. Service种类
+#### 按运行地点分类：
+1. 本地服务（Local Service）：依附在主线程上，节约资源。通信不需要IPC和AIDL，bindService方便；主线程被kill后，服务终止；比如音乐播放器等不需要常驻的服务
+2. 远程服务（remote service）：独立进程，进程名为包名+android：process字符串。服务不受其他进程kill影响；独立进程占用资源；比如常驻的提供系统服务的service
+
+#### 按运行类型分类：
+1. 前台服务：会在通知栏显示；服务终止时，通知栏的notification会消失，比如音乐播放服务
+2. 后台服务：不会在通知栏显示；用户看不到终止提示，比如日期同步、邮件同步等
+
+#### 按使用方式分类：
+1. startService启动的服务：启动一个服务进行后台服务，不进行通信。停止服务用stopService
+2. bindService启动的服务：启动的服务要进行通信。停止服务要unbindService
+3. 同时使用startService和bindService启动的服务：停止服务使用stopService和unbindService
+
+### 三. 生命周期
    * onCreate()
-   * onStartCommand():如果服务已经创建了，后续重复启动，操作的都是同一个服务，不会再重新创建了，除非你先销毁它
+   * onStartCommand():如果服务已经创建了，后续重复启动，操作的都是同一个服务，不会再重新创建了，除非你先销毁它。每次客户端调用startService()方法启动该Service都会回调该方法（多次调用）。一旦这个方法执行，service就启动并且在后台长期运行。通过调用stopSelf()或stopService()来停止服务。
    ```java
        public void operate(View v){
         switch (v.getId()){
