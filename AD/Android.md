@@ -406,6 +406,23 @@ startActivity(intent);
 ##### 4. 单例模式（singleInstance）
 1. 打开该Activity时，会直接创建一个新的任务栈，并创建该Activity实例放入新栈中。一旦该模式的Activity实例已经存在于某个栈中，任何应用再激活该Activity时都会重用该栈中的实例。
 2. 应用场景： 呼叫来电界面。这种模式的使用情况比较罕见，在Launcher中可能使用。或者你确定你需要使Activity只有一个实例。建议谨慎使用。
+##### 5. 特殊情况——前台栈和后台栈的交互
+假如目前有两个任务栈。前台任务栈为AB，后台任务栈为CD，这里假设CD的启动模式均为singleTask,现在请求启动D，那么这个后台的任务栈都会被切换到前台，这个时候整个后退列表就变成了ABCD。当用户按back返回时，列表中的activity会一一出栈——D,C,B,A
+
+如果不是请求启动D而是启动C，那么情况又不一样——C,B,A
+
+调用SingleTask模式的后台任务栈中的Activity，会把整个栈的Actvity压入当前栈的栈顶。singleTask会具有clearTop特性，把之上的栈内Activity清除。
+
+##### 6. Activity的Flags
+用于设定Activity的启动模式。可以在启动Activity时，通过Intent的addFlags()方法设置。
+
+(1)FLAG_ACTIVITY_NEW_TASK 其效果与指定Activity为singleTask模式一致。
+
+(2)FLAG_ACTIVITY_SINGLE_TOP 其效果与指定Activity为singleTop模式一致。
+
+(3)FLAG_ACTIVITY_CLEAR_TOP 具有此标记位的Activity，当它启动时，在同一个任务栈中所有位于它上面的Activity都要出栈。
+* 如果和singleTask模式一起出现，若被启动的Activity已经存在栈中，则清除其之上的Activity，并调用该Activity的onNewIntent方法。
+* 如果被启动的Activity采用standard模式，那么该Activity连同之上的所有Activity出栈，然后创建新的Activity实例并压入栈中。
 #### 三. 生命周期 
 #### 1. 典型生命周期
    (1). on Create() on Start() onResume() onPause() onStop() onDestory() onRestart()
