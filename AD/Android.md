@@ -4707,7 +4707,7 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
 ### 三. 生命周期
    * onCreate()
    * onStartCommand():如果服务已经创建了，后续重复启动，操作的都是同一个服务，不会再重新创建了，除非你先销毁它。每次客户端调用startService()方法启动该Service都会回调该方法（多次调用）。一旦这个方法执行，service就启动并且在后台长期运行。通过调用stopSelf()或stopService()来停止服务。
-   ```java
+   ```java 
        public void operate(View v){
         switch (v.getId()){
             case R.id.start:
