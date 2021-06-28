@@ -4865,7 +4865,31 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
       * 启动一个后台服务长期进行某项任务——startservice
       * 与正在运行的service取得联系——broadCast/bindService。
         * broadCast：交流比较频繁，容易造成性能上的问题，并且 BroadcastReceiver 本身执行代码的时间是很短的（也许执行到一半，后面的代码便不会执行）
+        * 因此选择使用bindService方法，同时使用startService和bindService
+      * 如果服务只是公开一个远程接口，供连接上的客服端（android 的 Service 是C/S架构）远程调用执行方法。这个时候可以不让服务一开始就运行，而只用 bindService ，这样在第一次 bindService 的时候才会创建服务的实例运行它，这会节约很多系统资源，特别是如果服务是Remote Service，那么该效果会越明显（当然在 Service 创建的时候会花去一定时间）。
+### 四、Service的几种典型使用实例
+#### 1. 不可交互的后台服务
+1. 通过StartService方式开启，生命周期方法是onCreate、onStartCommand、onDestroy
+2. Service类重写上述生命周期方法，并配置该服务类，在前台调用startService方法，就会启动耗时操作（在startCommend方法中开启子线程）
+3. service执行在ui线程中，可以在service中创建子线程来完成耗时操作。
+4. Service关闭后，需要在onDestory()方法中关闭线程。因此，在onDestory()方法中要进行必要的清理工作。
 
+#### 2. 可交互的后台服务
+1. 可交互的后台服务是指前台页面可以调用后台服务的方法，通过bindService()方式开启。Service的生命周期分别为onCreate、onBind、onUnBind、onDestroy。
+2. 需要返回一个ibinder对象，返回给 前台进行获取，从而前台可以获取该代理对象执行后台服务的方法，
+3. 前台调用：bindService(mIntent,con,BIND_AUTO_CREATE);con是ServiceConnection 对象，ServiceConnection 类的onServiceConnected方法传入的参数是后台返回的ibinder，从而可以通过binder对象调用后台服务类的方法。
+4. 当调用unbindService()停止服务，同时要在onDestory()方法中做好清理工作。
+5. 通过bindService启动的Service的生命周期依附于启动它的Context。因此当前台调用bindService的Context销毁后，那么服务会自动停止。
+
+#### 3. 混合型后台服务
+将上面两种启动方式结合起来就是混合性交互的后台服务了，即可以单独运行后台服务，也可以运行后台服务中提供的方法，其完整的生命周期是：onCreate->onStartCommand->onBind->onUnBind->onDestroy
+
+#### 4. 前台服务
+1. 前台服务提升了服务所在的进程级别，当系统内存不足的时候后台服务会被回收掉，前台服务不会被回收掉
+2. 前台服务需要在service的基础上创建一个Notification，然后调用Service的startForeground()方法来启动为前台服务。然后调用startService方法启动前台服务
+3. 点击notification的跳转不能使用PendingIntent的原因。会在程序退出后，notification仍然存在，点击后再back会回退到home界面而不是应用程序的界面，因此增加使用taskStackBuilder来进行跳转。
+4. 用TaskStackBuilder.create(this)创建一个stackBuilder实例，然后stackBuilder.addParentStack(NotificationShow.class);含义为：为跳转后的activity添加一个父activity，在activity中的manifest中添加parentActivityName。也就是说在NotificationShow这个界面点击回退时，会跳转到MainActivity这个界面，而不是直接回到了home菜单。
+5. 通过 stopForeground()方法可以取消通知，即将前台服务降为后台服务。此时服务依然没有停止。通过stopService()可以把前台服务停止。
 ###  <span id = "35">ALDL实现远程服务的通信</span>
 1. 安卓接口定义语言：进程间的通信接口
 ###  <span id = "36">ContentProvider</span>
