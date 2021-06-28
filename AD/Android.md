@@ -3847,29 +3847,45 @@ public class StudentDao {
    * setOnGroupCollapseListener：点击group收缩的回调
    * setOnGroupExpandListener：点击group展开的回调
 ###  <span id = "22">BroadcastReceiver 广播接收器</span>
-1. Broadcast实现
-   * 消息订阅者注册（Binder机制）
+### 一、定义
+1. 四大组件之一，属于一个全局的监听器
+2. 分为：广播发送者、广播接收者
+
+### 二、作用
+1. 用于监听 / 接收 应用发出的广播消息，并做出响应
+2. 应用场景
+* 不同组件之间通信（包括应用内 / 不同应用之间）
+* 与 Android 系统在特定情况下的通信——如当电话呼入时、网络可用时
+* 多线程通信
+
+### 三、实现原理
+1. 观察者模式：基于消息的发布/订阅事件模型。Android将广播的发送者 和 接收者 解耦，使得系统方便集成
+2. 三个角色：
+ * 消息订阅者——广播接收
+ * 消息发布者——广播发布
+ * 消息中心（AMS，即Activity Manager Service）
+3. 原理描述：
+   * 接收者在AMS注册（Binder机制）
       * 静态注册 Manifest.xml中
       * 动态注册 运行期间注册
-   * 消息发布者通过处理中心AMS进行处理
-   * 发送广播给消息订阅者（Binder机制）
-2. 系统广播：安卓系统发送广播（比如电量，网络状态变化等），应用注册并接收
-   * 静态注册
+   * 发布者通过Binder机制向AMS发送广播
+   * AMS 根据 广播发送者 要求，在已注册列表中，寻找合适的广播接收者
+     * 寻找依据：IntentFilter / Permission
+   * AMS将广播发送到合适的广播接收者相应的消息循环队列中
+   * 广播接收者通过 消息循环 拿到此广播，并回调 onReceive()
+#### 广播发送者 和 广播接收者的执行 是 异步的，发出去的广播不会关心有无接收者接收，也不确定接收者到底是何时才能接收到；
+
+### 四、具体使用
+1. 自定义广播接收者BroadcastReceiver
+2. 注册
    ```java
-   // 1. 创建广播
+   // 1. 自定义广播接收者BroadcastReceiver
     public class ImoocBroadcastReceiver extends BroadcastReceiver {
-
-        TextView mTextView;
-        public ImoocBroadcastReceiver() {
-        }
-
-        public ImoocBroadcastReceiver(TextView textView) {
-            mTextView = textView;
-        }
-
-        private static final String TAG = "ImoocBroadcastReceiver";
         @Override
-        //接收广播时回调的方法
+        //1.1 接收广播时回调的方法
+        // 广播接收器接收到相应广播后，会自动回调onReceive()方法
+        // 一般情况下，onReceive方法会涉及与其他组件之间的交互，如发送Notification、启动service等
+         //默认情况下，广播接收器运行在UI线程，因此，onReceive方法不能执行耗时操作，否则将导致ANR。
         public void onReceive(Context context, Intent intent) {
             // 接收广播
             if(intent != null){
@@ -3891,6 +3907,7 @@ public class StudentDao {
    ```java
      // 1. 创建广播
         //2. 注册静态广播
+        //在AndroidManifest.xml里通过 <receive> 标签声明
         <!-- 静态注册广播接收器 -->
         <receiver
             android:name=".ImoocBroadcastReceiver">
@@ -3916,8 +3933,65 @@ public class StudentDao {
 
         </receiver>
    ```
-   * 动态注册
-3. 应用广播：应用发送广播，其他应用接收
+   * 动态注册：在代码中通过调用Context的*registerReceiver（）*方法进行动态注册BroadcastReceiver，
+   ```java
+   @Override
+    protected void onResume() {
+        super.onResume();
+
+        //实例化BroadcastReceiver子类 &  IntentFilter
+        mBroadcastReceiver mBroadcastReceiver = new mBroadcastReceiver();
+        IntentFilter intentFilter = new IntentFilter();
+
+        //设置接收广播的类型
+        intentFilter.addAction(android.net.conn.CONNECTIVITY_CHANGE);
+
+        //调用Context的registerReceiver（）方法进行动态注册
+        registerReceiver(mBroadcastReceiver, intentFilter);
+    }
+
+
+    //注册广播后，要在相应位置记得销毁广播
+    //即在onPause() 中unregisterReceiver(mBroadcastReceiver)
+    //当此Activity实例化时，会动态将MyBroadcastReceiver注册到系统中
+    //当此Activity销毁时，动态注册的MyBroadcastReceiver将不再接收到相应的广播。
+    @Override
+    protected void onPause() {
+        super.onPause();
+        //销毁在onResume()方法中的广播
+        unregisterReceiver(mBroadcastReceiver);
+    }
+   ```
+   ### 注意：
+   * 动态广播最好在Activity的onResume()注册、onPause()注销。
+   * 原因：对于动态广播，有注册就必然得有注销，否则会导致内存泄露
+ #### 两种注册方式的区别：
+ 1. 静态注册（常驻广播）：不受组件的生命周期影响，耗电占用内存，需要时刻监听广播
+ 2. 动态注册（非常驻广播）：灵活，跟随组件的生命周期变化，组件结束=广播结束，在组件结束前，必须移除广播接收器。需要在特定时刻监听广播。
+
+3. 广播发送者向AMS发送广播 
+   1. 广播发送者将此广播的”intent“通过sendBroadcast()方法发送出去
+   2. 普通广播：
+      * intent.setAction(BROADCAST_ACTION);进行定义
+      * 若被注册了的广播接收者中注册时intentFilter的action与上述匹配，则会接收此广播（即进行回调onReceive()）。如下mBroadcastReceiver则会接收上述广播
+   3. 系统广播
+      * 每个广播都有特定的Intent - Filter
+      * 当使用系统广播时，只需要在注册广播接收者时定义相关的action即可，并不需要手动发送广播，当系统有相关操作时会自动进行系统广播
+   4. 有序广播
+      * 发送出去的广播被广播接收者按照先后顺序接收，有序是针对广播接收者而言的
+      * 广播接受者接收广播的顺序规则：按照Priority属性值从大-小排序；Priority属性相同者，动态注册的广播优先；
+      * 先接收的广播接收者可以对广播进行截断，即后接收的广播接收者不再接收到此广播；
+      * 先接收的广播接收者可以对广播进行修改，那么后接收的广播接收者将接收到被修改后的广播
+      * 发送方式是：sendOrderedBroadcast(intent);
+   5. App应用内广播
+       * App应用内广播可理解为一种局部广播，广播的发送者和接收者都同属于一个App。
+       * 相比于全局广播（普通广播），App应用内广播优势体现在：安全性高 & 效率高
+       * 使用方法1：将全局广播设置成局部广播
+         * 注册广播时将exported属性设置为false，使得非本App内部发出的此广播不被接收；
+         * 在广播发送和接收时，增设相应权限permission，用于权限验证；
+         * 发送广播时指定该广播接收器所在的包名，此广播将只会发送到此包中的App内与之相匹配的有效广播接收器中。通过 intent.setPackage(packageName) 指定报名
+       * 使用方法2：使用封装好的LocalBroadcastManager类 使用方式上与全局广播几乎相同，只是注册/取消注册广播接收器和发送广播时将参数的context变成了LocalBroadcastManager的单一实例
+4. 应用广播：应用发送广播，其他应用接收
    * 自定义广播动态注册（自己发送自己接收）
    ```java
    // 1. 创建广播
@@ -3962,7 +4036,7 @@ public class StudentDao {
         //设置页面的名字
         // 用包名做title
         setTitle(getPackageName());
-4. 生命周期
+5. 生命周期
    * 广播类中的onReceive方法在主线程中，如果操作十秒，会阻塞主线程
    * 需要onReceive中建立子线程进行处理，接到消息后分类给子线程进行处理
 ###  <span id = "23">Application全局应用</span>
