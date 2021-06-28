@@ -4705,6 +4705,7 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
 3. 同时使用startService和bindService启动的服务：停止服务使用stopService和unbindService
 
 ### 三. 生命周期
+### 生命周期介绍
    * onCreate()
    * onStartCommand():如果服务已经创建了，后续重复启动，操作的都是同一个服务，不会再重新创建了，除非你先销毁它。每次客户端调用startService()方法启动该Service都会回调该方法（多次调用）。一旦这个方法执行，service就启动并且在后台长期运行。通过调用stopSelf()或stopService()来停止服务。
    ```java 
@@ -4717,7 +4718,9 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
                 startService(it1);
                 break;
    ```
-   * onBind():绑定.先创建再绑定，但是不会开始运行。先解绑再停止服务。会随着Actiity结束而结束。
+   * onBind():绑定.先创建再绑定，但是不会开始运行。先解绑再停止服务；
+     * 会随着Actiity结束而结束。调用bindService()方法进行绑定，会调用onbind方法，但是只会调用一次,下次再调用bindservice不会回调该方法。
+     * 在实onBind实现中返回一个IBinder来使客户端与service进行通信，如果不允许绑定，返回null
    ```java
        //IBinder
     //ServicerConnection:用于绑定客户端和Service
@@ -4745,23 +4748,35 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
    * onUnbind()：解绑。
       * 如果服务不存在： onCreate-->onBind-->onUnbind-->onDestory。
       * 服务已经存在：那么bindService方法只能使onBind方法被调用，而unbindService方法只能使onUnbind被调用
+      * 当前组件调用unbindService()，想要解除与service的绑定时系统调用此方法（一次调用，一旦解除绑定后，下次再调用unbindService()会抛出异常）
    ```java
    case R.id.unbind:
                 //解绑服务
                 unbindService(conn);
                 break;
    ```
-   * onDestory()
+   * onDestory()：service不再被使用时并销毁时使用，在此方法中释放资源，
    ```java
                case R.id.stop:
                 Intent it2 = new Intent(this,MyService.class);
                 stopService(it2);
                 break;
    ```
-   * 启动操作:onCreate()--onStartCommand()--服务运行--onDestory()--服务停止。进行执行确实要执行的耗时操作
-   * 绑定操作：onCreate()--onBind()--绑定--onUnbind()--onDestory()--服务停止。会随着Activity的结束而结束。因此进行进度监控
-5. 绑定操作的作用——Activity对后台service执行的任务进行进度监控
-   * IBinder：用于远程操作对象的一个基本接口
+### 三种不同情况下Service的生命周期情况。
+  1. 启动操作:
+     * onCreate()--onStartCommand()--服务运行--onDestory()--服务停止。进行执行确实要执行的耗时操作
+     * Context.startService方法启动，那么不管是否有Activity使用bindService绑定或unbindService解除绑定到该Service，该Service都在后台运行，直到被调用stopService，或自身的stopSelf方法。
+     * 如果系统资源不足，android系统也可能结束服务，
+     * 还有一种方法可以关闭服务，在设置中，通过应用->找到自己应用->停止。
+     * 第一次 startService 会触发 onCreate 和 onStartCommand，以后在服务运行过程中，每次 startService 都只会触发 onStartCommand
+     * 不论 startService 多少次，stopService 一次就会停止服务
+  2. 绑定操作：onCreate()--onBind()--绑定--onUnbind()--onDestory()--服务停止。
+     * 会随着Activity的结束而结束。因此进行进度监控
+     * 如果一个Service在某个Activity中被调用bindService方法启动，不论bindService被调用几次，Service的onCreate方法只会执行一次，同时onStartCommand方法始终不会调用。
+     * 当建立连接后，Service会一直运行，除非调用unbindService来解除绑定、断开连接或调用该Service的Context不存在了（如Activity被Finish——即通过bindService启动的Service的生命周期依附于启动它的Context），系统在这时会自动停止该Service。
+     * 第一次 bindService 会触发 onCreate 和 onBind，以后在服务运行过程中，每次 bindService 都不会触发任何回调
+     * 绑定操作的作用——Activity对后台service执行的任务进行进度监控
+      * IBinder：用于远程操作对象的一个基本接口
    ```java
    //1. startService(本类对象)
     public class MyService extends Service {
@@ -4817,7 +4832,7 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
             }
         }
    ```
-   * ServicerConnection
+      * ServicerConnection
    ```java
     //IBinder
     //5. ServicerConnection:用于绑定客户端和Service
@@ -4842,6 +4857,15 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
         }
       };
    ```
+  3. 混合型
+      * service在被启动（startservice）的时候又被绑定（bindservice）， 该service会一直在后台运行
+      * onCreate方法始终只调用一次，onstartcommand调用次数和startservice调用次数一致
+      * 调用unBindService将不会停止Service，必须调用stopService或Service自身的stopSelf来停止服务。
+  4. 在什么情况下使用 startService 或 bindService 或 同时使用startService 和 bindService？
+      * 启动一个后台服务长期进行某项任务——startservice
+      * 与正在运行的service取得联系——broadCast/bindService。
+        * broadCast：交流比较频繁，容易造成性能上的问题，并且 BroadcastReceiver 本身执行代码的时间是很短的（也许执行到一半，后面的代码便不会执行）
+
 ###  <span id = "35">ALDL实现远程服务的通信</span>
 1. 安卓接口定义语言：进程间的通信接口
 ###  <span id = "36">ContentProvider</span>
