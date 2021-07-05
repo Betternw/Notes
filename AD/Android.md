@@ -4967,13 +4967,19 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
 ###  <span id = "35">ALDL实现远程服务的通信</span>
 1. 安卓接口定义语言：进程间的通信接口
 ###  <span id = "36">ContentProvider</span>
+### 一 作用
 1. 四大组件之一——为存储和获取数据提供统一的接口。也就是将自身通过接口将数据提供给外部。
-2. 实现不同的应用程序之间共享数据（比如微信可以访问联系人数据）
-3. 将数据存表，然后以操作数据库的形式去操作数据。
-4. ContentProvider配置
+2. 进程间进行数据交互&共享，即跨进程通信
+3. 实现不同的应用程序之间共享数据（比如微信可以访问联系人数据）
+4. 属于数据的搬运工，真正存储和操作数据的数据源还是原来存储数据的方式（数据库、文件、xml或网络）。
+
+### 原理
+1. 将数据存表，然后以操作数据库的形式去操作数据。
+2. 底层采用Android中的Binder机制
+3. ContentProvider配置
    * 自定义类继承于CP，实现要求的方法
    * 配置标签、属性、指定当前内容提供者的url标识且唯一
-5. ContentResolver
+4. ContentResolver
    * 用来做数据访问，访问其他数据的手段
    * CP的方法和CS的方法一样，参数也相同。通过url可以调用到对面的同名方法
 ###  <span id = "37">Socket&Https通信</span>
