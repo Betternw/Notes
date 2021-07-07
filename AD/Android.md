@@ -4973,15 +4973,137 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
 3. 实现不同的应用程序之间共享数据（比如微信可以访问联系人数据）
 4. 属于数据的搬运工，真正存储和操作数据的数据源还是原来存储数据的方式（数据库、文件、xml或网络）。
 
-### 原理
+### 二 原理
 1. 将数据存表，然后以操作数据库的形式去操作数据。
 2. 底层采用Android中的Binder机制
-3. ContentProvider配置
-   * 自定义类继承于CP，实现要求的方法
-   * 配置标签、属性、指定当前内容提供者的url标识且唯一
-4. ContentResolver
-   * 用来做数据访问，访问其他数据的手段
-   * CP的方法和CS的方法一样，参数也相同。通过url可以调用到对面的同名方法
+
+### 三 使用
+#### 1. 统一资源标识符（URI）
+* 唯一标识contentprovider以及其中的数据
+* 外界进程通过URI找到对应的contentprovider和其中的数据，再进行数据操作。
+* 分为系统预置和自定义，自定义对应自定义数据库
+* 自定义URI = content://（主题名）com.carson.provider（授权信息）/user（表名）/1(记录)
+  * 主题：URI前缀
+  * 授权信息：唯一标识符
+  * 表名：指向数据库中的某个表名
+  * 记录：表中的某个记录，若无指定就返回全部记录
+#### 2. MIME数据类型
+* 指设定某种扩展名的文件用一种应用程序来打开的方式类型，多用于指定一些客户端自定义的文件名以及一些媒体文件打开方式
+* 作用：指定某个扩展名的文件用某种应用程序来打开 如指定.html文件采用text应用程序打开、指定.pdf文件采用flash应用程序打开
+* 使用：
+  * contentprovider根据URL返回MIME类型
+  * MIME由两部分组成 类型/子类型
+#### 3. Contentprovider类
+* 以表格的方式组织数据，也支持文件数据。
+* 共享数据：添加、删除、获取&修改更新数据
+* 核心方法：
+```java
+    public Uri insert(Uri uri, ContentValues values) 
+  // 外部进程向 ContentProvider 中添加数据
+
+  public int delete(Uri uri, String selection, String[] selectionArgs) 
+  // 外部进程 删除 ContentProvider 中的数据
+
+  public int update(Uri uri, ContentValues values, String selection, String[] selectionArgs)
+  // 外部进程更新 ContentProvider 中的数据
+
+  public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs,  String sortOrder)　 
+  // 外部应用 获取 ContentProvider 中的数据
+
+  // 注：
+  // 1. 上述4个方法由外部进程回调，并运行在ContentProvider进程的Binder线程池中（不是主线程）
+ // 2. 存在多线程并发访问，需要实现线程同步
+   // a. 若ContentProvider的数据存储方式是使用SQLite & 一个，则不需要，因为SQLite内部实现好了线程同步，若是多个SQLite则需要，因为SQL对象之间无法进行线程同步
+  // b. 若ContentProvider的数据存储方式是内存，则需要自己实现线程同步
+  
+    <-- 2个其他方法 -->
+    public boolean onCreate() 
+    // ContentProvider创建后 或 打开系统后其它进程第一次访问该ContentProvider时 由系统进行调用
+    // 注：运行在ContentProvider进程的主线程，故不能做耗时操作
+
+    public String getType(Uri uri)
+    // 得到数据类型，即返回当前 Url 所代表数据的MIME类型
+```
+* 常见的数据如通讯录等有内置的默认的Contentprovder，自定义需要重写上面六个方法
+* contentprovider主要通过contentresolver与外部进行交互
+#### 4. 辅助工具类——contentResolver类
+* 通过URI操作不同的contentprovider中的数据；外部进程通过 ContentResolver类 从而与ContentProvider类进行交互
+* 为什么要使用通过ContentResolver类从而与ContentProvider类进行交互，而不直接访问ContentProvider类？
+  * 一款应用要使用多个ContentProvider，若需要了解每个ContentProvider的不同实现从而再完成数据交互，操作成本高 & 难度大，所以再ContentProvider类上加多了一个 ContentResolver类对所有的ContentProvider进行统一管理。
+* 具体使用
+```java
+    // 外部进程向 ContentProvider 中添加数据
+    public Uri insert(Uri uri, ContentValues values)　 
+
+    // 外部进程 删除 ContentProvider 中的数据
+    public int delete(Uri uri, String selection, String[] selectionArgs)
+
+    // 外部进程更新 ContentProvider 中的数据
+    public int update(Uri uri, ContentValues values, String selection, String[] selectionArgs)　 
+
+    // 外部应用 获取 ContentProvider 中的数据
+    public Cursor query(Uri uri, String[] projection, String selection, String[] selectionArgs, String sortOrder)
+
+    // 使用ContentResolver前，需要先获取ContentResolver
+    // 可通过在所有继承Context的类中 通过调用getContentResolver()来获得ContentResolver
+    ContentResolver resolver =  getContentResolver(); 
+
+    // 设置ContentProvider的URI
+    Uri uri = Uri.parse("content://cn.scu.myprovider/user"); 
+
+    // 根据URI 操作 ContentProvider中的数据
+    // 此处是获取ContentProvider中 user表的所有记录 
+    Cursor cursor = resolver.query(uri, null, null, null, "userid desc");
+```
+#### 5. 辅助工具类——contentUris
+* 操作URI
+* 具体使用 核心方法有两个：withAppendedId（） &parseId（）
+```java
+    // withAppendedId（）作用：向URI追加一个id
+    Uri uri = Uri.parse("content://cn.scu.myprovider/user") 
+    Uri resultUri = ContentUris.withAppendedId(uri, 7);  
+    // 最终生成后的Uri为：content://cn.scu.myprovider/user/7
+
+    // parseId（）作用：从URL中获取ID
+    Uri uri = Uri.parse("content://cn.scu.myprovider/user/7") 
+    long personid = ContentUris.parseId(uri); 
+    //获取的结果为:7
+```
+#### 6. 辅助工具类——UriMatcher类
+* 在ContentProvider 中注册URI；根据 URI 匹配 ContentProvider 中对应的数据表
+* 具体使用：
+```java
+// 步骤1：初始化UriMatcher对象
+ UriMatcher matcher = new UriMatcher(UriMatcher.NO_MATCH);
+ // 步骤2：在ContentProvider 中注册URI（addURI（））
+ matcher.addURI("cn.scu.myprovider", "user1", URI_CODE_a);
+// 步骤3：根据URI 匹配 URI_CODE，从而匹配ContentProvider中相应的资源（match（））
+public String getType (Uri uri) {
+ }
+```
+#### 7. 辅助工具类——ContentObserver类
+* 内容观察者，观察 Uri引起ContentProvider 中的数据变化 & 通知外界（即访问该数据访问者）
+* 当ContentProvider 中的数据发生变化（增、删 & 改）时，就会触发该 ContentObserver类
+* 使用
+```java
+// 步骤1：注册内容观察者ContentObserver
+getContentResolver().registerContentObserver（uri）；
+// 步骤2：当该URI的ContentProvider数据发生变化时，通知外界（即访问该ContentProvider数据的访问者）
+public class UserContentProvider extends ContentProvider {
+    public Uri insert(Uri uri, ContentValues values) {
+        db.insert("user", "userid", values);
+        getContext().getContentResolver().notifyChange(uri, null);
+        // 通知访问者
+    }
+}
+
+// 步骤3：解除观察者
+getContentResolver().unregisterContentObserver（uri）；
+// 同样需要通过ContentResolver类进行解除
+```
+### 四 实例说明
+#### 1. 进程内通信
+##### 步骤
 ###  <span id = "37">Socket&Https通信</span>
 1. Socket：
    * 通过，ip定位电脑，端口号定位程序。
