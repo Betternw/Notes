@@ -5103,7 +5103,46 @@ getContentResolver().unregisterContentObserver（uri）；
 ```
 ### 四 实例说明
 #### 1. 进程内通信
-##### 步骤
+1. 创建数据库类 DBHelper.java
+2. 自定义 ContentProvider 类,要重写6个方法，
+3. 注册 创建的 ContentProvider类 在AndroidManifest.xml中
+4. 进程内访问数据
+```java
+       // 设置URI
+        Uri uri_user = Uri.parse("content://cn.scu.myprovider/user");
+
+        // 插入表中数据
+        ContentValues values = new ContentValues();
+        values.put("_id", 3);
+        values.put("name", "Iverson");
+         // 获取ContentResolver
+        ContentResolver resolver =  getContentResolver();
+        // 通过ContentResolver 根据URI 向ContentProvider中插入数据
+        resolver.insert(uri_user,values);
+         // 通过ContentResolver 向ContentProvider中查询数据
+        Cursor cursor = resolver.query(uri_user, new String[]{"_id","name"}, null, null, null);
+        while (cursor.moveToNext()){
+            System.out.println("query book:" + cursor.getInt(0) +" "+ cursor.getString(1));
+            // 将表中数据全部输出
+        }
+        cursor.close();
+        // 关闭游标
+```
+#### 2. 进程间数据共享
+1. 需要创建2个进程，进程1创建contentprovider并存储数据，进程2访问contentprovider中的存储数据。
+2. 进程1：
+   1. 创建数据库类
+   2. 自定义 ContentProvider 类,要重写6个方法，
+   3. 注册 创建的 ContentProvider类 在AndroidManifest.xml中
+    * 需要声明外界可访问的权限，可以戏份为读写
+    * 设置此provider是否可以被其他进程使用
+3. 进程2:
+   1. AndroidManifest.xml中声明权限，与进程1中的相对应
+   2. 访问数据，基本同上。
+
+### 五 优点
+1. 应用间数据交互可以根据需求将自己的数据开放给其他应用进行增删改查，不用担心因为直接开发数据库权限而带来安全问题。
+2. 采用不同的存储方式存储数据，数据的访问方式也会不同。比如文件操作读写文件方式存储的数据，sharedpreferences API读写Sharedpreferences 共享数据。而采用ContentProvider方式，，使得无论底层数据存储采用何种方式，外界对数据的访问方式都是统一的。
 ###  <span id = "37">Socket&Https通信</span>
 1. Socket：
    * 通过，ip定位电脑，端口号定位程序。
