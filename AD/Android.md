@@ -887,246 +887,179 @@ case R.id.arrayAdapter_btn:
 ```
 
 ###  <span id = "8">Fragment</span>
-1. 设计思想
+### 一 什么Fragment
    * 一个Activity中放置运行多个Fragment，可以根据不同的分辨率进行页面的拆分
    * Fragment必须放在Activity中
-2. 生命周期
-3. 加载
-   * 静态加载：xml文件
-   ``` java
-   //1. 在MainActiyity中设置点击事件，由MainActivity跳到StaticLoadFragmentActivity
-      protected void onCreate(Bundle savedInstanceState) {
+   * 拥有自己的生命周期，可以在Activity中动态的添加、替换、移除不同的Fragment
+### 二 生命周期
+onAttach() -> onCreate() -> onCreateView() -> onActivityCreated() ->(这里对应Activity的created)
+onAttach(): Fragment与Activity发生关联的时候调用
+onCreateView(LayoutInflater, ViewGroup, Bundle)：创建该Fragment的视图
+nActivityCreated(Bundle)：当Activity的onCreated方法返回时调用
+onStart() -> onResume -> onPause -> onStop() -> 
+onDestroyView() -> onDestroy() -> onDetach()
+onDestroyView(): 与onCreateView方法相对应，当该Fragment的视图被移除时调用
+onDetach(): 与onAttach方法相对应，当Fragment与Activity取消关联时调用
+### 三 使用方式
+#### 1. 静态加载：xml文件
+* 创建一个类继承Fragment，重写onCreateView方法，来确定Fragment要显示的布局
+* 在Activity中声明该类，与普通的View对象一样
+```java
+//1. MyFragment对应的布局文件item_fragment.xml
+    <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        android:background="@color/colorAccent"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent">
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:src="@mipmap/ic_launcher" />
+
+    </RelativeLayout>
+
+//2. 继承Frgmanet的类MyFragment【请注意导包的时候导v4的Fragment的包】
+public class MyFragment extends Fragment {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        /*
+        * 参数1：布局文件的id
+        * 参数2：容器
+        * 参数3：是否将这个生成的View添加到这个容器中去
+        * 作用是将布局文件封装在一个View对象中，并填充到此Fragment中
+        * */
+        View v = inflater.inflate(R.layout.item_fragment, container, false);
+        return v;
+    }
+}
+
+//3. Activity对应的布局文件
+
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+        xmlns:tools="http://schemas.android.com/tools"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        tools:context="com.usher.fragment.MainActivity">
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="100dp"
+            android:gravity="center"
+            android:text="Good Boy" />
+
+        <fragment
+            android:id="@+id/myfragment"
+            android:name="com.usher.fragment.MyFragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+    </LinearLayout>
+```
+#### 2. 动态加载：java文件（比如在本页面设置两个fragment）  
+```java
+// 1. Fragment对应的布局文件item_fragment.xml和Fragment2对应的布局文件item_fragment2.xml
+// 2. 继承Frgmanet和Frgmanet1的类MyFragment和MyFragment1
+// 3. MainActivity对应的布局文件
+  <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    tools:context="com.usher.fragment.MainActivity">
+
+    <FrameLayout
+        android:id="@+id/myframelayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+  </LinearLayout>
+// 4. MainActivity类
+
+public class MainActivity extends AppCompatActivity {
+
+    private Button bt_red;
+    private Button bt_blue;
+    private FragmentManager manager;
+    private MyFragment fragment1;
+    private MyFragment2 fragment2;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        // find views on onclick event 静态加载
-        findViewById(R.id.textView).setOnClickListener(new View.OnClickListener() {
+        initView();
+
+        fragment1 = new MyFragment();
+        fragment2 = new MyFragment2();
+
+        //初始化FragmentManager对象
+        manager = getSupportFragmentManager();
+
+        //使用FragmentManager对象用来开启一个Fragment事务
+        FragmentTransaction transaction = manager.beginTransaction();
+
+        //默认显示fragment1
+        transaction.add(R.id.myframelayout, fragment1).commit();
+
+        //对bt_red设置监听
+        bt_red.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                // static load fragment.
-            startActivity(new Intent(MainActivity.this, StaticLoadFragmentActivity.class));
-            }
-        });
-   ```
-   
-   
-``` java
-   //2. 创建StaticLoadFragmentActivity，加载布局
-   public class StaticLoadFragmentActivity extends AppCompatActivity{
-    @Override
-    protected void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_static_load_fragment);
-    }
-}
-```
-   
-``` java
-//3. 创建activity_static_load_fragment，用这个fragment加载一个Activity
-<fragment
-android:id="@+id/listFragment"
-android:name="iom.imooc.fragmentdemo.ListFragment"
-android:layout_width="100dp"
-android:layout_height="100dp"/>
-
-<fragment
-android:id="@+id/detailFragment"
-android:name="iom.imooc.fragmentdemo.ListFragment"
-android:layout_centerInParent="true"
-android:layout_width="100dp"
-android:layout_height="100dp"/>
-```
-    
-``` java
-//4. 创建ListFragment和fragment_list.layout。每个fragment都可以加载一个fragment_list.layout
-    public class ListFragment extends Fragment {
-        public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        // 布局文件；当前所在group;绑定当前根布局
-        //返回布局渲染的视图view
-        View view = inflater.inflate(R.layout.fragment_list, container, false);
-        //对控件的处理
-        //必须是new出来的根视图view进行id的find
-        TextView textView = view.findViewById(R.id.textView);
-        textView.setText(mTitle);
-        return view;
-        }
-
-         <TextView
-        android:id="@+id/textView"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_centerInParent="true"
-        android:text="TextView"
-        android:textColor="#FFFFFF"
-        android:textSize="20sp"/>
-```  
-   * 动态加载：java文件（比如在本页面设置两个fragment）  
-    
-   ``` java
-   // 1.在要加载的页面设置container（用LinearLayout）
-       <LinearLayout
-        android:orientation="horizontal"
-        android:id="@+id/listContainer"
-        android:layout_width="150dp"
-        android:layout_margin="1dp"
-        android:layout_height="match_parent">
-
-    </LinearLayout>
-
-    <LinearLayout
-        android:orientation="horizontal"
-        android:id="@+id/detailContainer"
-        android:layout_width="200dp"
-        android:layout_margin="1dp"
-        android:layout_height="match_parent">
-
-    </LinearLayout>
-   ```
-   ```java
-   //2. 编写fragment
-   public class ListFragment extends Fragment {
-
-   ```
-   ```java
-   //3. 将fragment装入container中
-    // 1. container  2. fragment  3. fragment-->container
-        // activity--->fragment value
-        ListFragment listFragment = ListFragment.newInstance("list");
-        getSupportFragmentManager()
-                .beginTransaction()//开启事物，将fragment放在草container中
-                .add(R.id.listContainer, listFragment)//add remove replace
-                .commit();
-        listFragment.setOnTitleClickListener(this);
-
-        ListFragment detail = ListFragment.newInstance("detail");
-        getSupportFragmentManager()
-                .beginTransaction()
-                .add(R.id.detailContainer, detail)//和上面不能是同一个fragment，一个fragment只能加载一个fragment
-                .commit();
-
-        detail.setOnTitleClickListener(this);
-
-   ```
-4. 传值
-* Activity向Fragment传值
-``` java
-//ListFragment:
-    //传值 传入
-    public static ListFragment newInstance(String title){
-        ListFragment fragment = new ListFragment();
-        Bundle bundle = new Bundle();
-        bundle.putString(BUNDLE_TITLE, title);
-        fragment.setArguments(bundle);
-        return fragment;
-    }
-    //接收数据
-    @Override
-    public void onCreate(@Nullable Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        if(getArguments() != null){
-            mTitle = getArguments().getString(BUNDLE_TITLE);
-        }
-    }
-     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        View view = inflater.inflate(R.layout.fragment_list, container, false);
-        TextView textView = view.findViewById(R.id.textView);
-        //参数是接收传进的参数
-        textView.setText(mTitle);...}
-```
-```java
-//MainActivity:
-       //传入对象 list和detail
-       ListFragment listFragment = ListFragment.newInstance("list");
-        getSupportFragmentManager()
-                .beginTransaction()//开启事物，将fragment放在草container中
-                .add(R.id.listContainer, listFragment)
-                .commit();
-        listFragment.setOnTitleClickListener(this);
-
-        ListFragment detail = ListFragment.newInstance("detail");
-        getSupportFragmentManager()
-                .beginTransaction()
-                .add(R.id.detailContainer, detail)//和上面不能是同一个fragment，一个fragment只能加载一个fragment
-                .commit();
-```
-* Fragment向Activity传值——回调接口
-   * 步骤：
-     1. 类A：定义接口，定义接口类型变量（接受传值并设置事件），定义方法C（设置接口的方法），参数为接口类型变量并为接口变量赋值
-     2. 类B继承接口，类A对象调用方法C，参数是this（传值），重写接口方法——最终呈现的效果
-     3. 类A目标对象（触发事件的对象）当方法c的对象存在的时候，实现监听器，回调（实现）接口方法，将需要的参数传进去。
-     * （接口，观察者，实现者：定义接口，实现者传值并定义方法的最终实现形式，观察者当接收到实现者的对象时，将参数传给方法，方法实现）
-```java
-//ListFragment:
-    // 2. 设置参数为接口类型的函数
-    public void setOnTitleClickListener(OnTitleClickListener onTitleClickListener) {
-        this.mOnTitleClickListener = onTitleClickListener;
-    }
-
-    // 定义变量 接口对象
-    private OnTitleClickListener mOnTitleClickListener;
-
-    // 1. 定义接口
-    public interface OnTitleClickListener{
-        void onClick(String title);
-    }
-
-     public View onCreateView(LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        // 布局文件；当前所在group;绑定当前根布局
-        //返回布局渲染的视图view
-        View view = inflater.inflate(R.layout.fragment_list, container, false);
-
-        //对控件的处理
-        //必须是new出来的根视图view进行id的find
-        TextView textView = view.findViewById(R.id.textView);
-
-        //参数是接收传进的参数
-        textView.setText(mTitle);
-
-        //5. 回调实现的接口中的方法（textview被点击时）
-        textView.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if(mOnTitleClickListener != null){
-                    mOnTitleClickListener.onClick(mTitle);
-                }
+                FragmentTransaction transaction = manager.beginTransaction();
+                transaction.replace(R.id.myframelayout, fragment1).commit();
             }
         });
 
-        return view;
+        //对bt_blue设置监听
+        bt_blue.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                FragmentTransaction transaction = manager.beginTransaction();
+                transaction.replace(R.id.myframelayout, fragment2).commit();
+            }
+        });
     }
+
+    private void initView() {
+        bt_red = (Button) findViewById(R.id.bt_red);
+        bt_blue = (Button) findViewById(R.id.bt_blue);
+    }
+
+ }
 ```
-```java
-//MainActivity:
-//3. MainActivity实现接口
- public class MainActivity extends AppCompatActivity  implements ListFragment.OnTitleClickListener{
+通过Fragment管理器对象调用beginTransaction()方法，实例化FragmentTransaction对象,transaction的方法主要有以下几种：
+* transaction.add() 向Activity中添加一个Fragment
+* transaction.remove() 从Activity中移除一个Fragment，如果被移除的Fragment没有添加到回退栈，这个Fragment实例将会被销毁
+* transaction.replace() 使用另一个Fragment替换当前的，实际上就是remove()然后add()的合体
+* transaction.hide() 隐藏当前的Fragment，仅仅是设为不可见，并不会销毁
+* transaction.show() 显示之前隐藏的Fragment
+* detach() 会将view从UI中移除,和remove()不同,此时fragment的状态依然由FragmentManager维护
+* attach() 重建view视图，附加到UI上并显示
+* ransatcion.commit() 提交事务
+注意：在add/replace/hide/show以后都要commit其效果才会在屏幕上显示出来
 
-}
-        ListFragment listFragment = ListFragment.newInstance("list");
-        getSupportFragmentManager()
-                .beginTransaction()//开启事物，将fragment放在草container中
-                .add(R.id.listContainer, listFragment)
-                .commit();
-        //4. 调用（参数为接口类型的）函数，参数为自身
-        listFragment.setOnTitleClickListener(this);
-
-        ListFragment detail = ListFragment.newInstance("detail");
-        getSupportFragmentManager()
-                .beginTransaction()
-                .add(R.id.detailContainer, detail)//和上面不能是同一个fragment，一个fragment只能加载一个fragment
-                .commit();
-        //接口回调
-        detail.setOnTitleClickListener(this);
+### 四 回退栈
+1. FragmentTransaction.addToBackStack(String)： 把当前事务的变化情况添加到回退栈
+2. 调用replace -> 调用addToBackStack，使得被替换的Fragment实例不会被销毁，被添加到了回退栈。但是视图层次依然会被销毁，即会调用onDestoryView和onCreateView。因此返回前一个Fragment时候会进行重新绘制。
+3. 调用hide -> 调用add -> 调用addToBackStack，不调用replace，当返回时视图不会进行重新绘制。
+4. 原因：调用replace的生命周期是pause--stop--destroy，create--start，需要销毁前一个，耗时；而调用hide的生命周期是create--start，不耗时，但是占用内存。一般情况下如果Fragment不是很多就可以使用方式2来进行切换，这样能提高切换时的效率，保证app的流畅性（空间换时间）；如果Fragment比较多，并且对内存要求较高时，就用方式1来进行切换，保证app不会内存溢出（时间换空间）。
 
 
-    }
+### 五 Fragment与Activity之间的通信
+* 如果Activity中包含自己管理的Fragment的引用，可以通过引用直接访问所有的Fragment的public方法
+* 如果Activity中未保存任何Fragment的引用，每个Fragment都有一个唯一的TAG或者ID,可以通过getFragmentManager.findFragmentByTag()或者findFragmentById()获得任何Fragment实例，然后进行操作
+* Fragment中可以通过getActivity()得到当前绑定的Activity的实例，然后进行操作。
 
-//4 并实现方法
-    @Override
-    public void onClick(String title) {
-        setTitle(title);
-    }
+### 六 Fragment与Activity通信的优化
+1. 最好不要Fragment之间相互操作，Activity担任的是Fragment间类似总线一样的角色，应当由它决定Fragment如何操作
+2. Fragment不能响应Intent打开，但是Activity可以，Activity可以接收Intent，然后根据参数判断显示哪个Fragment。
 
-```
+### 七 处理运行时配置发生变化
+1. 屏幕旋转时，视图进行了重新绘制。Activity和Fragment都进行了重新创建，很耗费内存资源。
+2. Activity的onCreate的参数Bundle savedInstanceState中会存储一些数据，包括Fragment的实例，因此可以判断只有在savedInstanceState==null时，才进行创建Fragment实例，无论进行多次旋转都只会有一个Fragment实例在Activity中，
+3. 重新绘制时，Fragment发生重建，原本的数据如何保持？ 和Activity类似，Fragment也有onSaveInstanceState的方法，在此方法中进行保存数据，然后在onCreate或者onCreateView或者onActivityCreated进行恢复都可以。
 
 ###  <span id = "9"> ViewPager</span>
 1. 应用：引导界面、相册多图片预览；多Tab页面；广告播放展示（左滑右滑）
