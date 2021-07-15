@@ -8,7 +8,7 @@
  * #### [Dialog](#7)
  * #### [Fragment](#8)
  * #### [ViewPager](#9)
-### * [网络操作](#10)
+ * #### [事件分发](#10)
  * #### [网络操作](#11)
  * #### [Handler通信](#12)
  * #### [AsyncTask异步任务](#13)
@@ -1510,7 +1510,7 @@ main_tab_icon_home.xml:
     <item android:state_selected="true" android:drawable="@drawable/tabbar_home_pressed" />
     <item android:drawable="@drawable/tabbar_home" />
 ```
-## <span id = "10">网络操作</span>
+## <span id = "10">事件分发</span>
 ###  <span id = "11"> 网络操作</span>
 1. 基础知识
 * 服务端为客户端提供数据。
