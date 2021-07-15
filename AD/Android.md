@@ -1510,7 +1510,114 @@ main_tab_icon_home.xml:
     <item android:state_selected="true" android:drawable="@drawable/tabbar_home_pressed" />
     <item android:drawable="@drawable/tabbar_home" />
 ```
-## <span id = "10">事件分发</span>
+### <span id = "10">事件分发</span>
+### 一 基础认知
+#### 1. 事件分发的对象
+1. 事件分发的对象是事件
+2. 当用户触摸屏幕时（View或ViewGroup派生的控件），将产生点击事件（Touch事件）。Touch事件相关细节（发生触摸的位置、时间、历史记录、手势动作等）被封装成MotionEvent对象
+3. Touch主要有四种：
+   * MotionEvent.ACTION_DOWN：按下View（所有事件的开始）
+   * MotionEvent.ACTION_MOVE：滑动View
+   * MotionEvent.ACTION_CANCEL：非人为原因结束本次事件
+   * MotionEvent.ACTION_UP：抬起View（与DOWN对应）
+
+#### 2. 事件分发的本质
+1. 将点击事件MotionEvent传递给某一个view去处理，这个事件传递过程就是分发过程
+
+#### 3. 事件在哪些对象之间进行传递
+1. 传递顺序：Activity（window） -> viewGroup -> view
+2. View是所有UI组件的基类; ViewGroup是容纳UI组件的容器，即一组View的集合, 比起View，它多了可以包含子View和定义布局参数的功能。
+
+#### 4. 由哪些方法协作完成
+1. dispatchTouchEvent()：分发传递点击事件，当点击事件能够被传递给当前view时会调用
+2. onInterceptTouchEvent()：判断是否拦截了某个事件，在dispatchTouchEvent内部调用
+3. onTouchEvent()：处理点击事件，在dispatchTouchEvent内部调用
+
+### 二 事件分发机制方法&流程介绍
+```java
+    // 点击事件产生后，会直接调用dispatchTouchEvent（）方法
+    public boolean dispatchTouchEvent(MotionEvent ev) {
+
+        //代表是否消耗事件
+        boolean consume = false;
+
+
+        if (onInterceptTouchEvent(ev)) {
+        //如果onInterceptTouchEvent()返回true则代表当前View拦截了点击事件
+        //则该点击事件则会交给当前View进行处理
+        //即调用onTouchEvent (）方法去处理点击事件
+        consume = onTouchEvent (ev) ;
+
+        } else {
+        //如果onInterceptTouchEvent()返回false则代表当前View不拦截点击事件
+        //则该点击事件则会继续传递给它的子元素
+        //子元素的dispatchTouchEvent（）就会被调用，重复上述过程
+        //直到点击事件被最终处理为止
+        consume = child.dispatchTouchEvent (ev) ;
+        }
+
+        return consume;
+    }
+```
+
+### 三 事件分发场景介绍
+#### 1. 默认情况
+1. 从Activity A---->ViewGroup B--->View C，从上往下调用dispatchTouchEvent()
+2. 再由View C--->ViewGroup B --->Activity A，从下往上调用onTouchEvent()
+3. 虽然ViewGroup B的onInterceptTouchEvent方法对DOWN事件返回了false，后续的事件（MOVE、UP）依然会传递给它的onInterceptTouchEvent()
+
+#### 2. 处理事件
+1. 假设View C希望处理这个点击事件，DOWN事件被传递给C的onTouchEvent方法，该方法返回true，表示处理这个事件
+2. 因为C正在处理这个事件，那么DOWN事件将不再往上传递给B和A的onTouchEvent()；
+3. 该事件列的其他事件（Move、Up）也将传递给C的onTouchEvent()
+
+#### 3. 拦截事件
+1. 假设ViewGroup B希望处理这个点击事件，即B覆写了onInterceptTouchEvent()返回true、那么事件不再往下传递自己进行处理
+2. 调用onTouchEvent()处理事件（DOWN事件将不再往上传递给A的onTouchEvent()）
+3. 该事件列的其他事件（Move、Up）将直接传递给B的onTouchEvent()
+4. 该事件列的其他事件（Move、Up）将不会再传递给B的onInterceptTouchEvent方法，该方法一旦返回一次true，就再也不会被调用了。
+
+#### 4. 拦截Down的后续事件
+1. 假设ViewGroup B没有拦截DOWN事件（还是View C来处理DOWN事件），但它拦截了接下来的MOVE事件。DOWN事件传递到C的onTouchEvent方法，返回了true。
+2. MOVE事件，B的onInterceptTouchEvent方法返回true拦截该MOVE事件，但该事件并没有传递给B的onTouchEvent方法
+3. 这个MOVE事件将会被系统变成一个CANCEL事件传递给C的onTouchEvent方法
+4. 后续又来了一个MOVE事件，该MOVE事件才会直接传递给B的onTouchEvent()、
+5. C再也不会收到该事件列产生的后续事件。
+
+#### 注意：
+1. 如果ViewGroup A 拦截了一个半路的事件（如MOVE），这个事件将会被系统变成一个CANCEL事件并传递给子View；
+2. 该事件不会再传递给ViewGroup A的onTouchEvent()
+3. 只有再到来的事件才会传递到ViewGroup A的onTouchEvent()
+
+### 四 Android事件分发机制源码分析
+#### 1. Activity的事件分发机制
+1. 当一个点击事件发生时，事件最先传到Activity的dispatchTouchEvent()进行事件分发
+2. 调用Window类实现类PhoneWindow的superDispatchTouchEvent()
+3. 调用DecorView的superDispatchTouchEvent()
+4. 最终调用DecorView父类的dispatchTouchEvent()，即ViewGroup的dispatchTouchEvent()
+5. 这样事件就从 Activity 传递到了 ViewGroup
+
+#### 2. ViewGroup事件的分发机制
+1. onInterceptTouchEvent方法返回true代表拦截事件，即不允许事件继续向子View传递；
+2. 返回false代表不拦截事件，即允许事件继续向子View传递；（默认返回false）
+3. 子View中如果将传递的事件消费掉，ViewGroup中将无法接收到任何事件。
+
+#### 3. View事件的分发机制
+1. onTouch（）的执行高于onClick（）
+2. 每当控件被点击时：
+   1. 如果在回调onTouch()里返回false，就会让dispatchTouchEvent方法返回false，那么就会执行onTouchEvent()；如果回调了setOnClickListener()来给控件注册点击事件的话，最后会在performClick()方法里回调onClick()。————onTouch()返回false（该事件没被onTouch()消费掉） = 执行onTouchEvent() = 执行OnClick()
+   2. onTouch()返回true（该事件被onTouch()消费掉） = dispatchTouchEvent()返回true（不会再继续向下传递） = 不会执行onTouchEvent() = 不会执行OnClick()
+
+### 五 思考点
+#### 1，onTouch()和onTouchEvent()的区别
+1. 有些控件是非enable的，即不能点击， 那么给它注册onTouch事件将永远得不到执行。对于这一类控件，如果我们想要监听它的touch事件，就必须通过在该控件中重写onTouchEvent方法来实现。
+2. onTouch能够得到执行需要两个前提条件： mOnTouchListener的值不能为空，当前点击的控件必须是enable的。
+
+#### 2. Touch事件的后续事件（MOVE、UP）层级传递
+1. 如果给控件注册了Touch事件，每次点击都会触发一系列action事件（ACTION_DOWN，ACTION_MOVE，ACTION_UP等）
+2. 当dispatchTouchEvent在进行事件分发的时候，只有前一个事件（如ACTION_DOWN）返回true，才会收到后一个事件（ACTION_MOVE和ACTION_UP）
+3. 如果在某个对象（Activity、ViewGroup、View）的dispatchTouchEvent()消费事件（返回true），那么收到ACTION_DOWN的函数也能收到ACTION_MOVE和ACTION_UP
+4. 如果在某个对象（Activity、ViewGroup、View）的onTouchEvent()消费事件（返回true），那么ACTION_MOVE和ACTION_UP的事件从上往下传到这个View后就不再往下传递了，而直接传给自己的onTouchEvent()并结束本次事件传递过程。
 ###  <span id = "11"> 网络操作</span>
 1. 基础知识
 * 服务端为客户端提供数据。
