@@ -1790,17 +1790,18 @@ main_tab_icon_home.xml:
     <category android:name="android.intent.category.LAUNCHER"/>       
     </application>               
     ```
-###  <span id = "12"> Handler通信</span>
-1. 关于线程
+###  <span id = "12"> Handler通信——消息机制</span>
+### 一 消息机制概述
+#### 1. 简介
    * 主线程=UI线程
    * new Thread创建子线程
    * 子线程不能更新UI线程的东西，需要使用Handler
    * 消息循环机制：进入主线程后开始循环，处理事件
-2. Handler作用
+1. Handler作用
    * 定时任务
    * 在不同的线程之间执行动作
    * MessageQueue是消息队列，存储message和runnable，在线程里，Looper将Message从队列中取出，抽给handler，其中的handlerMessage方法对消息进行处理；或者Looper将runable从队列中取出，直接run。
-3. Handler使用
+2. Handler使用
    * 基本实现和消息发送
    创建handler——创建子线程，子线程中handler中做更改内容——通过handler将更改的message发送给主线程——主线程handler接收消息并处理
    ```java
