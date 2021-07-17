@@ -2141,7 +2141,7 @@ main_tab_icon_home.xml:
   * 调用 scheduleNext()方法，调用THREAD_POOL_EXECUTOR执行队列头部的任务。
   * 可见SerialExecutor 类仅仅为了保持任务执行是串行的，实际执行交给了THREAD_POOL_EXECUTOR。
   * InternalHandler是一个静态类，为了能够将执行环境切换到主线程，因此这个类必须在主线程中进行加载。所以变相要求AsyncTask的类必须在主线程中进行加载。
-  * ，默认情况下AsyncTask的执行效果是串行的，因为有了SerialExecutor类来维持保证队列的串行。如果想使用并行执行任务，那么可以直接跳过SerialExecutor类，使用executeOnExecutor()来执行任务。
+  * ，默认情况下AsyncTask的执行效果是串行的，因为有了SerialExecutor类来维持保证队列的串行。如果想使用并行执行任务，那么可以直接跳过SerialExecutor类，使用executeOnExecutor()来执行任务。 
 
 ### 三 使用不当的后果
 1. 生命周期：AsyncTask不与任何组件绑定生命周期，所以在Activity/或者Fragment中创建执行AsyncTask时，最好在Activity/Fragment的onDestory()调用 cancel(boolean)；
