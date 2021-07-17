@@ -2010,7 +2010,8 @@ main_tab_icon_home.xml:
 2. 即使有死循环但是可以通过创建新线程的方法来处理其他的事务，比如ActivityThread类
 3. 真正会卡死主线程的操作是在回调方法onCreate/onStart/onResume等操作时间过长，会导致掉帧，甚至发生ANR，looper.loop本身不会导致应用卡死。
 4. 在主线程的MessageQueue没有消息时，便阻塞在loop的queue.next()中的nativePollOnce()方法里，此时主线程会释放CPU资源进入休眠状态，直到下个消息到达或者有事务发生，通过往pipe管道写端写入数据来唤醒主线程工作。这里采用的epoll机制，是一种IO多路复用机制，可以同时监控多个描述符，当某个描述符就绪(读或写就绪)，则立刻通知相应程序进行读或写操作，本质同步I/O，即读写是阻塞的。 所以说，主线程大多数时候都是处于休眠状态，并不会消耗大量CPU资源。
-###  <span id = "13"> AsyncTask异步任务</span> 
+###  <span id = "13"> AsyncTask异步任务</span>
+### 一、简介 
 1. 同步任务：一步一步进行  异步任务：同时进行，互不干扰，多个线程
 2. 线程、多线程
    * ANR（Application Not Responding）：应用程序无响应
@@ -2019,410 +2020,133 @@ main_tab_icon_home.xml:
    * 线程具有安全问题
    * 子线程更新主线程的东西使用handler，将要更改的信息传给主线程
 3. AsyncTask
-   * 目的：方便在后台线程操作后更新UI
-   * Thread和Handler进行封装
-   * 实质：Handler异步消息处理机制
-   * 参数都是泛型
-   * 常用方法
-      * 执行前——onPreExecute()  主线程
-      * 执行中—— doInBackground 另一个线程，抛出进度
-      * 执行后——onPostExecute 主线程
-      * 处理进度——onProgressUpdate 主线程
-4. 实现下载功能
-   * 网络上请求数据：申请网络权限 读写存储权限
-   ```java
-       <uses-permission android:name="android.permission.INTERNET"/>
-       <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
-       <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-   ```
-   * 布局layout
-   * 下载之前：UI
-   * 下载中：数据
-   * 下载后：UI
-   ```java
-   public class MainActivity extends AppCompatActivity {
+   * 目的：在线程池中执行后台任务，然后把执行的进度和最终进度传递给主线程并在主线程并在主线程中更新UI
+4. 组成
+    * 封装了两个线程池(SerialExecutor和THREAD_POOL_EXECUTOR)和一个Handler(InternalHandler)
+    * SerialExecutor线程池用于任务的排队，让需要执行的多个耗时任务，按顺序排列，THREAD_POOL_EXECUTOR线程池才真正地执行任务，InternalHandler用于从工作线程切换到主线程。
+5. Handler异步消息处理机制
+6. 泛型参数
+   * Params ：开始异步任务执行时传入的参数类型；
+   * Progress：异步任务执行过程中，返回下载进度值的类型；
+   * Result：异步任务执行完成后，返回的结果类型；
+7. 核心方法
+   * 执行前——onPreExecute()，在主线程执行，用于进行一些界面上的初始化操作，比如显示一个进度条对话框等等
+   * 执行中—— doInBackground，子线程中，处理耗时任务，通过return语句将任务的执行结果返回，此方法中不可以进行UI操作
+   * 执行后——onPostExecute 主线程，利用参数中的数值就可以对界面元素进行相应的更新
+   * 处理进度——onProgressUpdate，返回的数据会作为参数传递到此方法中，利用返回的数据进行操作，在主线程中进行，比如提醒任务执行的结果，关闭进度条对话框等。
+   * 调用顺序：
+     *  onPreExecute() --> doInBackground() -> onProgressUpdate() --> onPostExecute()
+     *  如果不需要执行更新进度则为onPreExecute() --> doInBackground() --> onPostExecute(),
+   * onCancelled方法：主线程中执行，当异步任务取消时，会被调用。此时onPostExecute不会被调用。此方法将任务设置为取消状态，需要在doInBackGround判断终止任务。就好比想要终止一个线程，调用interrupt()方法，只是进行标记为中断，需要在线程内部进行标记判断然后中断线程。
+8. 简单实用——执行下载
+```java
+    class DownloadTask extends AsyncTask<Void, Integer, Boolean> {  
+        @Override  
+        protected void onPreExecute() {  
+            progressDialog.show();  
+        }  
 
-    private static final String TAG = "MainActivity";
-    public static final int INIT_PROGRESS = 0;
-    public static final String APK_URL = "http://download.sj.qq.com/upload/connAssitantDownload/upload/MobileAssistant_1.apk";
-    public static final String FILE_NAME = "imooc.apk";
-    private ProgressBar mProgressBar;
-    private Button mDownloadButton;
-    private TextView mResultTextView;
+        @Override  
+        protected Boolean doInBackground(Void... params) {  
+            try {  
+                while (true) {  
+                    int downloadPercent = doDownload();  
+                    publishProgress(downloadPercent);  
+                    if (downloadPercent >= 100) {  
+                        break;  
+                    }  
+                }  
+            } catch (Exception e) {  
+                return false;  
+            }  
+            return true;  
+        }  
 
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        @Override  
+        protected void onProgressUpdate(Integer... values) {  
+            progressDialog.setMessage("当前下载进度：" + values[0] + "%");  
+        }  
 
-        // 1. 初始化视图
-        initView();
-
-        // 2. 设置点击监听
-        setListener();
-
-        // 3. 初始化UI数据
-        setData();
-
-        /*DownloadHelper.download(APK_URL, "", new DownloadHelper.OnDownloadListener.SimpleDownloadListener() {
-            @Override
-            public void onSuccess(int code, File file) {
-
-            }
-
-            @Override
-            public void onFail(int code, File file, String message) {
-
-            }
-
-            @Override
-            public void onStart() {
-                super.onStart();
-            }
-
-            @Override
-            public void onProgress(int progress) {
-                super.onProgress(progress);
-            }
-        });*/
-
-
+        @Override  
+        protected void onPostExecute(Boolean result) {  
+            progressDialog.dismiss();  
+            if (result) {  
+                Toast.makeText(context, "下载成功", Toast.LENGTH_SHORT).show();  
+            } else {  
+                Toast.makeText(context, "下载失败", Toast.LENGTH_SHORT).show();  
+            }  
+        }  
     }
+```
+在doInBackground()方法中去执行具体的下载逻辑，在onProgressUpdate()方法中显示当前的下载进度，在onPostExecute()方法中来提示任务的执行结果。如果要启动任务，执行：
+```java
+ new DownloadTask().execute();
+```
+9. 注意事项
+ * AsyncTask对象必须在UI线程中创建。
+ * execute(Params... params)方法必须在UI线程中调用。
+ * 不要手动调用onPreExecute()，doInBackground(Params... params)，onProgressUpdate(Progress... values)，onPostExecute(Result result)这几个方法。
+ * 不能在doInBackground(Params... params)中更改UI组件的信息。（在子线程中执行的方法）
+ * 一个任务实例只能执行一次，如果执行第二次将会抛出异常。
 
-    /**
-     * 初始化视图
-     */
-    //1. 初始化视图
-    private void initView() {
-
-        mProgressBar = (ProgressBar) findViewById(R.id.progressBar);
-        mDownloadButton = (Button) findViewById(R.id.button);
-        mResultTextView = (TextView) findViewById(R.id.textView);
-
-    }
-
-    //2. 设置点击监听
-    private void setListener() {
-
-        mDownloadButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                // TODO: 16/12/19 下载任务
-                //5.1 传参
-                DownloadAsyncTask asyncTask = new DownloadAsyncTask();
-                asyncTask.execute(APK_URL);
-            }
-        });
-    }
-
-    // 3.初始化数据
-    private void setData() {
-
-        mResultTextView.setText(R.string.download_text);
-        mDownloadButton.setText(R.string.click_download);
-        mProgressBar.setProgress(INIT_PROGRESS);
-
-    }
-
-
-    /**
-     * String 入参
-     * Integer 进度
-     * Boolean 返回值
-     */
-    public class DownloadAsyncTask extends AsyncTask<String, Integer, Boolean> {
-        String mFilePath;
-        /**
-         * 在异步任务之前，在主线程中
-         */
-        @Override
-        // 4 下载前操作
-        protected void onPreExecute() {
-            super.onPreExecute();
-            // 可操作UI  类似淘米,之前的准备工作
-            mDownloadButton.setText(R.string.downloading);
-            mResultTextView.setText(R.string.downloading);
-            mProgressBar.setProgress(INIT_PROGRESS);
-        }
-
-        /**
-         * 在另外一个线程中处理事件
-         *
-         * @param params 入参  煮米
-         * @return 结果
-         */
-        @Override
-        // 5.下载中 另外一个线程处理
-        // 5.1 传参
-        protected Boolean doInBackground(String... params) {
-            if(params != null && params.length > 0){
-                String apkUrl = params[0];
-
-                try {
-                    // 构造URL
-                    URL url = new URL(apkUrl);
-                    // 构造连接，并打开
-                    URLConnection urlConnection = url.openConnection();
-                    InputStream inputStream = urlConnection.getInputStream();
-
-                    // 获取了下载内容的总长度
-                    int contentLength = urlConnection.getContentLength();
-
-                    // 下载地址准备
-                    mFilePath = Environment.getExternalStorageDirectory()
-                            + File.separator + FILE_NAME;
-
-                    // 对下载地址进行处理
-                    File apkFile = new File(mFilePath);
-                    if(apkFile.exists()){
-                        boolean result = apkFile.delete();
-                        if(!result){
-                            return false;
-                        }
-                    }
-
-                    // 已下载的大小
-                    int downloadSize = 0;
-
-                    // byte数组
-                    byte[] bytes = new byte[1024];
-
-                    int length;
-
-                    // 创建一个输入管道
-                    OutputStream outputStream = new FileOutputStream(mFilePath);
-
-                    // 不断的一车一车挖土,走到挖不到为止
-                    while ((length = inputStream.read(bytes)) != -1){
-                        // 挖到的放到我们的文件管道里
-                        outputStream.write(bytes, 0, length);
-                        // 累加我们的大小
-                        downloadSize += length;
-                        // 发送进度  每次下载都更新进度
-                        publishProgress(downloadSize * 100/contentLength);
-                    }
-
-                    inputStream.close();
-                    outputStream.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    return false;
-                }
-            } else {
-                return false;
-            }
-
-            return true;
-        }
-
-        // 6 下载后操作
-        @Override
-        protected void onPostExecute(Boolean result) {
-            super.onPostExecute(result);
-            // 也是在主线程中 ，执行结果 处理
-            mDownloadButton.setText(result? getString(R.string.download_finish) : getString(R.string.download_finish));
-            mResultTextView.setText(result? getString(R.string.download_finish) + mFilePath: getString(R.string.download_finish));
-
-        }
-
-        // 7 下载进度处理
-        @Override
-        protected void onProgressUpdate(Integer... values) {
-            super.onProgressUpdate(values);
-            // 收到进度，然后处理： 也是在UI线程中。
-            if (values != null && values.length > 0) {
-                mProgressBar.setProgress(values[0]);
-            }
-        }
-
-    }
-
-   ```
-5. 封装方法
-   * 创建调用类进行封装
-      * 回调：封装类中定义接口（要执行的方法）、定义下载方法、执行异步任务（参数为接口），然后执行类使用封装类的对象调用异步任务，参数有接口，重写接口允许的方法。
-      ```java
-        public class DownloadHelper {
-
-
-        // 执行异步任务 excute方法
-        public static void download(String url, String localPath, OnDownloadListener listener){
-            DownloadAsyncTask task = new DownloadAsyncTask(url, localPath, listener);
-            task.execute();
-        }
-
-
-        public static class DownloadAsyncTask extends AsyncTask<String, Integer, Boolean> {
-
-            String mUrl;
-            String mFilePath;
-            OnDownloadListener mListener;
-
-            public DownloadAsyncTask(String url, String filePath, OnDownloadListener listener) {
-                mUrl = url;
-                mFilePath = filePath;
-                mListener = listener;
-            }
-
-            /**
-            * 在异步任务之前，在主线程中
-            */
-            @Override
-            //1. 执行前
-            protected void onPreExecute() {
-                super.onPreExecute();
-                // 可操作UI  类似淘米,之前的准备工作
-                if(mListener != null){
-                    mListener.onStart();
-                }
-            }
-
-            /**
-            * 在另外一个线程中处理事件
-            *
-            * @param params 入参  煮米
-            * @return 结果
-            */
-            @Override
-            //2.执行中， 在另外一个线程中处理事件 String... params可变参数，数量任意
-            //抛出进度
-            //在异步线程处理，其余都是主线程
-            protected Boolean doInBackground(String... params) {
-                    String apkUrl = mUrl;
-
+### 二 源码分析
+1. 构造函数
+```java
+    public AsyncTask() {
+            mWorker = new WorkerRunnable<Params, Result>() {
+                public Result call() throws Exception {
+                    mTaskInvoked.set(true);
+                    Result result = null;
                     try {
-                        // 构造URL
-                        URL url = new URL(apkUrl);
-                        // 构造连接，并打开
-                        URLConnection urlConnection = url.openConnection();
-                        InputStream inputStream = urlConnection.getInputStream();
-
-                        // 获取了下载内容的总长度
-                        int contentLength = urlConnection.getContentLength();
-
-                        // 对下载地址进行处理
-                        File apkFile = new File(mFilePath);
-                        if(apkFile.exists()){
-                            boolean result = apkFile.delete();
-                            if(!result){
-                                if(mListener != null){
-                                    mListener.onFail(-1, apkFile, "文件删除失败");
-                                }
-                                return false;
-                            }
-                        }
-
-                        // 已下载的大小
-                        int downloadSize = 0;
-
-                        // byte数组
-                        byte[] bytes = new byte[1024];
-
-                        int length;
-
-                        // 创建一个输入管道
-                        OutputStream outputStream = new FileOutputStream(mFilePath);
-
-                        // 不断的一车一车挖土,走到挖不到为止
-                        while ((length = inputStream.read(bytes)) != -1){
-                            // 挖到的放到我们的文件管道里
-                            outputStream.write(bytes, 0, length);
-                            // 累加我们的大小
-                            downloadSize += length;
-                            // 发送进度
-                            publishProgress(downloadSize * 100/contentLength);
-                        }
-
-                        inputStream.close();
-                        outputStream.close();
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                        if(mListener != null){
-                            mListener.onFail(-2, new File(mFilePath), e.getMessage());
-                        }
-                        return false;
+                        Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
+                        //noinspection unchecked
+                        result = doInBackground(mParams);
+                        Binder.flushPendingCommands();
+                    } catch (Throwable tr) {
+                        mCancelled.set(true);
+                        throw tr;
+                    } finally {
+                        postResult(result);
                     }
-
-                if(mListener != null){
-                    mListener.onSuccess(0, new File(mFilePath));
+                    return result;
                 }
-                return true;
-            }
+            };
 
-            @Override
-            // 3. 执行后
-            protected void onPostExecute(Boolean result) {
-                super.onPostExecute(result);
-                // 也是在主线程中 ，执行结果 处理
-            }
-
-            @Override
-            //4. 处理进度
-            protected void onProgressUpdate(Integer... values) {
-                super.onProgressUpdate(values);
-                // 收到进度，然后处理： 也是在UI线程中。
-                if (values != null && values.length > 0) {
-                    if(mListener != null){
-                        mListener.onProgress(values[0]);
+            mFuture = new FutureTask<Result>(mWorker) {
+                @Override
+                protected void done() {
+                    try {
+                        postResultIfNotInvoked(get());
+                    } catch (InterruptedException e) {
+                        android.util.Log.w(LOG_TAG, e);
+                    } catch (ExecutionException e) {
+                        throw new RuntimeException("An error occurred while executing doInBackground()",
+                                e.getCause());
+                    } catch (CancellationException e) {
+                        postResultIfNotInvoked(null);
                     }
                 }
-
-            }
-
+            };
         }
+```
+* 初始化mWorker和mFuture变量，并在初始化mFuture的时候将mWorker作为参数传入。
+* mWorker是一个Callable对象，mFuture是一个FutureTask对象，这两个变量会暂时保存在内存中，稍后才会用到它们。 FutureTask实现了Runnable接口。
+* mWorker中的call()方法执行了耗时操作，即result = doInBackground(mParams);,然后把执行得到的结果通过postResult(result);,传递给内部的Handler跳转到主线程中。
 
+2. exec方法
+* 调用了SerialExecutor 类的execute方法。
+* SerialExecutor 内部维持了一个队列，通过锁使得该队列保证AsyncTask中的任务是串行执行的，即多个任务需要一个个加到该队列中，然后执行完队列头部的再执行下一个，以此类推。
+* 在这个方法中，有两个主要步骤。 
+  * 向队列中加入一个新的任务，即之前实例化后的mFuture对象。
+  * 调用 scheduleNext()方法，调用THREAD_POOL_EXECUTOR执行队列头部的任务。
+  * 可见SerialExecutor 类仅仅为了保持任务执行是串行的，实际执行交给了THREAD_POOL_EXECUTOR。
+  * InternalHandler是一个静态类，为了能够将执行环境切换到主线程，因此这个类必须在主线程中进行加载。所以变相要求AsyncTask的类必须在主线程中进行加载。
+  * ，默认情况下AsyncTask的执行效果是串行的，因为有了SerialExecutor类来维持保证队列的串行。如果想使用并行执行任务，那么可以直接跳过SerialExecutor类，使用executeOnExecutor()来执行任务。
 
-        public interface OnDownloadListener{
-
-            void onStart();
-
-            void onSuccess(int code, File file);
-
-            void onFail(int code , File file, String message);
-
-            void onProgress(int progress);
-
-
-            //内部抽象类，其中定义的方法不是必须实现的，可以简化代码
-            abstract class SimpleDownloadListener implements OnDownloadListener{
-                @Override
-                public void onStart() {
-
-                }
-
-                @Override
-                public void onProgress(int progress) {}}}}
-
-                
-      ```
-   * 调用封装方法
-   ```java
-   DownloadHelper.download(APK_URL, "", new DownloadHelper.OnDownloadListener.SimpleDownloadListener() {
-            @Override
-            public void onSuccess(int code, File file) {
-
-            }
-
-            @Override
-            public void onFail(int code, File file, String message) {
-
-            }
-
-            @Override
-            public void onStart() {
-                super.onStart();
-            }
-
-            @Override
-            public void onProgress(int progress) {
-                super.onProgress(progress);
-            }
-        });
-   ```
-6. 注意
-   * 主线程执行excute（）方法
-   * Task实例必须在UI进程创建 
-   * 注意防止内存泄漏——弱引用       
+### 三 使用不当的后果
+1. 生命周期：AsyncTask不与任何组件绑定生命周期，所以在Activity/或者Fragment中创建执行AsyncTask时，最好在Activity/Fragment的onDestory()调用 cancel(boolean)；
+2. 内存泄露：如果AsyncTask被声明为Activity的非静态的内部类，那么AsyncTask会保留一个对创建了AsyncTask的Activity的引用。如果Activity已经被销毁，AsyncTask的后台线程还在执行，它将继续在内存里保留这个引用，导致Activity无法被回收，引起内存泄露。
+3. 结果丢失：屏幕旋转或Activity在后台被系统杀掉等情况会导致Activity的重新创建，之前运行的AsyncTask（非静态的内部类）会持有一个之前Activity的引用，这个引用已经无效，这时调用onPostExecute()再去更新界面将不再生效。
 ## <span id = "14">高级控件</span>
 ###  <span id = "15"> ListView</span>
 1. 由多个item组成，每个item都是一个视图
