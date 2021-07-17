@@ -36,7 +36,7 @@
 * #### [ALDL实现远程服务的通信](#35)
 * #### [ContentProvider](#36)
 * #### [Socket&Https通信](#37)
-### * [项目](#38)
+* #### [HandlerThread](#38)
 ## <span id = "1">快捷键</span>
 alt+enter：错误纠正
 ## <span id = "2">第一章</span>
@@ -4583,193 +4583,94 @@ getContentResolver().unregisterContentObserver（uri）；
    * Http用于应用层，无状态协议
    * Socket用于传输层：可以自己定义协议，灵活性更高，实现Client和Server的通信。
 3. https：更加安全
-##  <span id = "38">项目</span>
-1. 模块化，用model作为基本单元
-2. 全局唯一配置入口，单Activity，以Fragment作为基本容器
-3. 核心model：路由架构、HTTP请求、通用UI、重复处理（ui绑定rv的处理网络请求的回调） 、业务相关的东西。
-4. 业务model：只有第三方库、项目特有的个别功能、相应一类业务的特殊UI、相应一类业务的通用逻辑和特殊处理
-5. 创建model：mall-library，存储自己的库等。业务无关的东西。
-6. 全局配置搭建
-* 配置管理器（mall.library/global/Configurator）
-   * 获取全局的存储容器变量
-   * 全局的单例模式
-   * 访问服务器端API设置
-   * 结束配置——进行一些回收动作，检查配置是否完成；配置完成后得到数据
-* 存储配置的容器（mall.library/utilstorage/MemoryStore)
-   * 以内存级别存储，当被序列化到xml或者数据库中后，在配置或者远程网络变化时也能及时更改响应
-   * 全局的类最好是线程安全的单例模式，内部类或者双重校验锁
-   * 以HashMap的数据结构存储数据
-* 枚举类的类型存储数据变量（mall.library/global/GlobalKeys）
-* 访问配置器的类（mall.library/global/Mall）
-   * 获取MemoryStore，全局context，返回值Configurator（配置）
-* 与app module进行连接（创建app.MallEXampleApp）
-   * 通过mall.library/global/Mall类的init方法进行访问全局配置中的方法或变量
-7. 网络框架搭建
-* 将Retrofit封装成一个通用的网络请求库
-   * 导入依赖“com.squareup.retrofit2:retrofit:2.9.0”
-   * 创建枚举类，存放HTTP方法（mall.library/net/HttpMethod）
-   * 创建Service接口，完成请求的映射（mall.library/net/RestService），对应RestfulAPI。写相应的get、post、delete、upload等方法
-   * 创建Retrofit的各个实例的类。（mall.library/net/RestCreator）。
-      * 创建OkHttpHolder用到了建造者模式：将一个复杂对象的构建与它的表示分离，使同样的构建过程可以创建不同的表示。
-      * 使用多个简单的对象一步一步构建成一个复杂的对象:
-      * 为了解析返回的字符串，使用了简单工厂模式
-* 实现具体的请求
-   * 在所有依赖mall-library的app中对外暴露直接使用的客户端，（mall.library/net/RestClient），————构建每一个restful请求，对API请求进行回应
-   * 建造者模式构建参数和回调。Builder是静态内部类，独立出一个类。（mall.library/net/RestClientBuilder），构建RestClient并初始化参数和回调，辅助RestClient。
-      * WeakHashMap存储请求参数——基于弱引用，随时可能被删除，在缓存时由于内存有限不能缓存所有对象，因此需要一定的删除机制淘汰掉一些对象。
-      * 建立具体处理逻辑的回调类，作为参数传递给RestClient中的方法调用。（mall.library/net/callback/RequestCallBacks）
-   * 建立（mall.library/callback）包，存放回调方法。
-* 网络加载
-   * 加载框
-      * 导入 api 'com.wang.avi:library:2.1.3'库
-      * 新建mall.library/ui/loader包，表示加载框，创建枚举类，ui/loader/LoaderStyles。样式的选择是通过加载类的名字以反射的形式加载实例，再以view渲染的方式进行展现
-      * 处理loader：mall.library/ui/loader/MallLoader。本身loader是以view的形式进行展现的，需要实例化再展现。所以应该以dialog容器的形式承载loader 以弹出框的形式加载出，当网络请求加载结束后再cancel。
-         * 获取屏幕宽高：导入工具类com.blankj:utilcode:1.29.0
-         * 设置加载方法
-      * 在RestClientBuilder、RestClient、RequestCallBacks中创建loader变量和初始化器
-8. UI搭建
-   * 基类Fragment实现
-      * 单Activity==controcler
-      * 导入Fragment包
-      * 新建Fragment包。
-      * mall.library/Fragment/BaseFragment，抽象类不实例化。
-      * mall.library/Fragment/MallFragment,继承自BaseFragment，编写延迟时间等一些在底部实现的封装方法
-      * 建立承载容器Activity：mall.library/activities/ProxyActivity。初始化容器并继承代理方法。
-   * 电商主页
-      * 封装底部Tab基类——mall.library/Fragment/bottom
-         * mall.library/Fragment/bottom/BaseBottonFragment：基类，不需要初始化，抽象类。相当于底部容器（底部所有）。将tab和fragment封装到每一个item中，进行点击事件的处理onBindView，比如颜色的切换，图标的改变等
-         * mall.library/Fragment/bottom/BaseItemFragment：实现基本功能。每一页tab的Fragment（每个tab点击的功能，和对应的每个tab点击后的Fragment）
-         * mall.library/Fragment/bottom/BottomTabBean：容纳每个tab中承载的Fragment（切换时的每个tab的属性，比如名字和图标）
-         * mall.library/Fragment/bottomItemBuilder：构建类，返回每个item（属性+功能）
-    * 实现底部的Tab类
-         * app/fragment/MallMainFragment:继承自BaseBottomFragment()，
-            * 初始化实现，添加需要的主界面和tab对，框架会自动判断并渲染出正确的主界面。图标使用font aawesome中的图标，直接fa引用，并设置每个tab的名字。
-            * 将字体库构造到constructor中。
-            * 创建每个item对应的实例化Fragment。在每个fragment中设置功能就可以实现具体每页的功能。
-9. 主页实现
-   * 首页框架
-      * 导入RecyclerView
-   * 轮播图
-      * 新建banner 初始化轮播图相关
-      * 创建holder：新建glide对象，将缓存策略、动画等放入glide对象，将data/url插入到imageView中进行加载，让image显示网络图片
-      * 创建creator：设置具体轮播，比如轮播时间和轮播样式等
-   * recyler的创建抽象几何
-      * 创建mall.library/ui/recyler
-      * mall.library/ui/recyler/ItemType：枚举。每个item的ui类型。比如只有文字、只有图片、轮播图等
-      * mall.library/ui/recyler/MultipleFields ：枚举类，数据加载要解析的字段与json转换的字段一一对应
-      * mall.library/ui/recyler/MultipleItemEntity：存储MultipleFields的字段的数据并做相应的转换。通过json返回值类型放入itemType，放入MultipleFields的itemType中的属性。
-      * mall.library/ui/recyler/MultipleItemEntityBuilder：构造器，item和itemType的连接工作
-      * mall.library/ui/recyler/MultipleRecyclerAdapter和 MultipleViewHolder 。将数据映射到相应的view中。经过adapter的处理后，在view看来所有的数据映射过来都是一样的。
-         * getSpanSize方法：将数据转换到MultipleItemEntity中通过方法获取到每一行的MultipleItemEntity，获取到spanSize，将该值又转换到getSpansize，判断一行能塞几个值——数据驱动ui通过
-         * convert：通过itemtype方法获取布局的类型进行渲染——数据驱动UI
-   * 数据驱动UI
-       * 惰性加载RV的UI和数据。
-       * 初始化数据
-         * 导入com.alibaba:fastjson:1.1.71.android包
-         * mall.library/ui/recyler/DataConverter：数据转换层，抽象方法
-         * app/fragment/index/IndexDataConverter：继承DataConverter，通过json object将数据取出，放入adapter对象中，RecyclerView加载adapter。
-10. 商品分类页面
-    * 右边内容
-       * app/fragment/sort/content/ContentFragment。点击list，通过contentFragment的静态方法newInstance（），将contentId传入，根据id得到content列表
-       * app/fragment/sort/content/SectionDataConverter：json数据转换，用SectionEntity存储数据，不用之前通用的Entity，因为content部分是section组成的。
-          * app/fragment/sort/content/SectionContentItemEntity ：存储section中的商品的数据类型
-          * app/fragment/sort/content/SectionBean：存储一整个section的数据
-          * 将SectionBean传入SectionDataConverter中，取出json数据并转换成对象
-       * app/fragment/sort/content/SectionAdapter：将数据映射（转换）到UI上
-       * app/fragment/sort/content/ContentFragment：初始化数据和view进行展示
-    * 左边分类栏
-       * app/fragment/sort/list/VerticalListFragment：初始化UI后加载数据
-       * app/fragment/sort/list/VerticalListDataConverter：数据转换
-    * list和content联动
-       * app/fragment/sort/list/SortRecyclerAdapter：通用adapter类，通过layout和枚举类取出每个空间的id，设置点击事件，
-       * app/fragment/sort/SortFragment：父类Fragment，加载布局进行初始化
-11. 购物车
-   * ContrainLayout布局实现购物车界面和item的布局
-   * app/fragment/cart/ShopCartFragment：初始化控件、加载数据、响应商品增减
-   * UI渲染
-      * app/fragment/cart/ShopCartDataConverter：数据转换，获取数据对象
-      * app/fragment/cart/ShopCartAdapter：将数据放入adapter，与UI进行交互渲染
-   * 加减商品
-      * adapter中添加加减事件，被点击后数目和价格的变化
-      * ShopCartFragment获取adapter和总价
-      * item价格变化改变外部fragment的总价：app/fragment/cart/ICartItemPriceListener接口，adapter中在加减方法中调用接口，将总价作为参数传递，fragment类中的adapter对象可以接收到变化的总价
-      * 每次加减都请求服务器，传递id和count
-   * 全选和清空（定义方法后要在bindView进行绑定）
-      * 定义点击接口，选择不同的按钮实现不同的事件
-      * 全选
-        * 使用tag进行标记是否全选
-        * 全选有颜色的更改，设置取消全选的下标范围
-        * 没有全选有颜色的更改，设置全选的下标范围
-      * 清空
-        * 清空adapter数据
-        * 清空改变
-        * 通知用户购物车清空了
-      * 删除选中条目
-        * 将需要删除的item记录
-        * adapter中的data中统一删除
-        * notify通知recylerView发生了删除
-      * ViewStub：随时可能出现的控件，会替代当前的layout。用作提醒购物车空需要添加。
-12. 商品详情
-    * app/fragment/details/GoodsDetailFragment
-      * 获取goodsID
-      * 通过API获取相应商品信息
-      * 轮播图的初始化 传入json对象
-      * 加载商品具体信息
-      * 初始化TabLayout和ViewPager，并关联TabLayout和ViewPager
-      * 上下粘性滑动
-      * 添加购物车操作：加入购物车动作进行了restful API请求，向服务器请求一次API，把加购物车的动作通知服务器，得到服务器返回结果后，将结果体现在购物车上
-    * app/fragment/index/IndexItemClickListener:点击事件的重写。点击首页的商品跳转到商品详情中。
-    * app/fragment/details/GoodsInfoFragment：商品详细信息。将json数据赋给具体的对象
-    * app/fragment/details/TabPagerAdapter：ViewPager的adapter。滑动到pager才加载数据。取出json数据放入对象中，做位置处理。
-    * app/fragment/details/ImageFragment：图片的显示放在另外的Fragment中处理，实现解耦。使用RecyclerView实现
-    * app/fragment/details/DetailImageAdapter：RecyclerView的adapter实现
-13. 项目总结
-   * 首页展示前，整个Ａｃｔｉｖｉｔｙ作为Ｆｒａｇｍｅｎｔ的调度站，负责Ｆｒａｇｍｅｎｔ的跳转和信息传递。这样的好处是，避免跳转流程复杂，导致自己开发时候很晕。一般Ｆｒａｇｍｅｎｔ的跳转需要Ａｐｐ的当前状态，用户的当前状态，通过这两状态去决定下一个Ｆｒａｇｍｅｎｔ是什么。
-   * MVC
-     * model：负责在数据库中存取数据
-     * view：处理数据的显示，视图是根据模型数据创建的
-     * controller：处理用户交互，从视图读取数据，并向模型发送数据。
-     * 优点：耦合性低，更改视图层代码不用重新编译模型和控制器代码
-     * 缺点：不能互相调用的时候就功能局限，独立重用功能很低。对数据可能会存在多次的频繁访问。
-14.  OkHttp
-     * 关于网络请求的第三方类库，其中封装了网络请求的get、post等操作的底层实现，
-     * 创建OkHttpclient对象：http请求的客户端类，client对象作为全局的实例进行保存。只需要这一个实例对象。所有的http请求共用client实例对象的response缓存和线程池。
-     * 创建request对象：存储了请求报文的信息（请求的URL地址、请求的方法和请求体，标志位），使用builder模式进行创建，将创建和表示分离。
-     * new call 方法创建call 对象：代表一个实际的http请求，连接request和response的桥梁。这个对象可以同步、异步获取数据
-       * execute（）： Response response = client.newCall(request).execute();。同步需要开启子线程，会阻塞进程获取数据，接收一个request对象，执行execute方法后返回response对象，也就是结果。
-         * 首先使用new创建OkHttpClient对象。然后调用OkHttpClient对象的newCall方法生成一个Call对象，该方法接收一个Request对象，Request对象存储的就是我们的请求URL和请求参数。最后执行Call对象的execute方法，得到Response对象，这个Response对象就是返回的结果。
-       * enqueue：client.newCall(request).enqueue(new Callback()。接收callback参数，不会阻塞，开启一个子线程，在子线程中操作。当异步请求成功时，回调onResponse方法，获取okHttp的response对象。当请求失败时，回调onFailture方法。这两个方法都在工作线程当中执行。
-         * 首先使用new创建OkHttpClient对象。然后调用OkHttpClient对象的newCall方法生成一个Call对象，该方法接收一个Request对象，Request对象存储的是我们的请求URL和请求参数。最后执行Call对象的enqueue方法，该方法接收一个Callback回调对象，在回调对象的onResponse方法中拿到Response对象，这就是返回的结果。
-     * post方法：在生成request方法的时候执行了post方法，get方法没有。因为request的builder时候，默认是get方法，所以需要post时就需要申明post方法。
-15. retrofit
-    * 创建一个接口，作为http请求的api接口。
-      * 使用注解的方式描述和配置网络请求参数。实际上是运用动态代理的方式将注解翻译成一个Http请求，然后执行该请求。
-      * 请求方法有GET、POST、PUT、HEAD、DELETE等
-      * 方法的返回类型必须为Call，xxx是接收数据的类
-      * User中字段的名字必须和后台Json定义的字段名是一致的，这样Json才能解析成功。
-      * public interface GitHubService {
-         @GET("getUserData")
-           Call<User> getCall();
-             }
-    * 创建一个Retrofit对象
-      * builder模式
-      * baseUrl拼接Url+网络请求接口的注解设置——网络请求的地址
-      * addConverterFactory(GsonConverterFactory.create())的作用是设置数据解析器，它可以解析Gson、JsonObject、JsonArray这三种格式的数据。
-      * Retrofit retrofit = new Retrofit.Builder().baseUrl("http://10.75.114.138:8081/")
-                .addConverterFactory(GsonConverterFactory.create()).build(); //设置网络请求的Url地址
-                .addConverterFactory(GsonConverterFactory.create()) //设置数据解析器
-                .build();
-    * 创建网络请求接口实例
-      * retrofit的create方法创建request对象
-      * retrofit的getcall创建call对象
-    * 发送网络请求——同步异步的请求和okHttp请求的一样。
-    * retrofit在OkHttp的上面封装了一层，使请求接口和数据解析更加简洁明了。
-16. ButterKnife
-    * 通过解析注解来实现辅助代码
-    * 绑定一个View  注解@BindView
-    * 给view添加点击事件
-17. Glide
-    * 传入context对象，调用load方法，使用into方法显示imageView
+###  <span id = "38">HandlerThread</span>
+### 一 使用场景
+1. 执行耗时操作需要开启子线程，线程的开启和销毁很消耗性能，因此可以使用线程池或者使用HandlerThread
+2. 可以用来执行多个耗时操作，不需要多次开启线程，里面是采用Handler和Looper实现的.
+3. 相当于是在子线程中创建了looper，即在子线程中执行耗时的、可能有多个任务的操作。它就是一个帮我们创建 Looper 的线程，让我们可以直接在线程中使用 Handler 来处理异步任务。
+4. 在子线程中直接创建Looper是很复杂的，因此使用HandlerThread，它包含了Looper，可以直接使用这个Looper创建的Handler
+### 二 使用方法
+1. 创建HandlerThread的实例对象
+```java
+    HandlerThread handlerThread = new HandlerThread("myHandlerThread");
+```
+2. 启动创建的HandlerThread线程
+```java
+    handlerThread.start();
+```
+当调用start后，子线程中的Looper开始工作，会按顺序取出消息队列中的队列处理，然后调用子线程的 Handler 处理
+3. 将HandlerThread与Handler绑定在一起，其实就是将HandlerThread的Looper和Handler绑定在一起
+```java
+    mThreadHandler = new Handler(mHandlerThread.getLooper()) {
+        @Override
+        public void handleMessage(Message msg) {
+            checkForUpdate();
+            if(isUpdate){
+                mThreadHandler.sendEmptyMessage(MSG_UPDATE_INFO);
+            }
+        }
+    };
+```
+### 三 源码解析
+1. 构造方法
+```java
+public HandlerThread(String name) {
+    super(name);
+    mPriority = Process.THREAD_PRIORITY_DEFAULT;
+}
+
+public HandlerThread(String name, int priority) {
+    super(name);
+    mPriority = priority;
+}
+```
+name表示当前线程的名称，priority为线程的优先级别
+
+2. run方法：初始化Looper获取当前线程的Looper并设置线程的优先级别
+```java
+    public void run() {
+        mTid = Process.myTid();
+        Looper.prepare();
+        //持有锁机制来获得当前线程的Looper对象
+        synchronized (this) {
+            mLooper = Looper.myLooper();
+            //发出通知，当前线程已经创建mLooper对象成功，这里主要是通知getLooper方法中的wait
+            notifyAll();
+        }
+        //设置线程的优先级别
+        Process.setThreadPriority(mPriority);
+        //这里默认是空方法的实现，我们可以重写这个方法来做一些线程开始之前的准备，方便扩展
+        onLooperPrepared();
+        Looper.loop();
+        mTid = -1;
+    }
+```
+   * 使用HandlerThread的时候必须调用start()方法，接着才可以将HandlerThread和handler绑定在一起。原因就是run()方法才开始初始化looper，而调用HandlerThread的start()方法的时候，线程会交给虚拟机调度，由虚拟机自动调用run方法。即调用start方法后对于内部才是调用了run方法
+   * 这里我们为什么要使用锁机制和notifyAll();，原因我们可以从getLooper()方法中知道：
+   ```java
+    public Looper getLooper() {
+        if (!isAlive()) {
+            return null;
+        }
+        // 直到线程创建完Looper之后才能获得Looper对象，Looper未创建成功，阻塞
+        synchronized (this) {
+            while (isAlive() && mLooper == null) {
+                try {
+                    wait();
+                } catch (InterruptedException e) {
+                }
+            }
+        }
+        return mLooper;
+    }
+   ```
+   总结：在获得mLooper对象的时候存在一个同步的问题，只有当线程创建成功并且Looper对象也创建成功之后才能获得mLooper的值。这里等待方法wait和run方法中的notifyAll方法共同完成同步问题。
+1. quit和quitSafe方法
+    * quit方法退出Looper消息循环及退出循环
+    * quitSafe方法调用安全的退出线程
+    * 最终调用到MessageQueue的quit方法
+    * quit方法：调用removeAllMessagesLocked();就是遍历Message链表，移除所有信息的回调，并重置为null。
+    * quitSafe方法：调用removeAllFutureMessagesLocked();这个方法，它会根据Message.when这个属性，判断我们当前消息队列是否正在处理消息，没有正在处理消息的话，直接移除所有回调，正在处理的话，等待该消息处理处理完毕再退出该循环。因此说quitSafe()是安全的，而quit()方法是不安全的，因为quit方法不管是否正在处理消息，直接移除所有回调。
   
 
    
