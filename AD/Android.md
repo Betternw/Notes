@@ -38,6 +38,7 @@
 * #### [Socket&Https通信](#37)
 * #### [HandlerThread](#38)
 * #### [IntentService](#39)
+* #### [LRUCache](#40)
 ## <span id = "1">快捷键</span>
 alt+enter：错误纠正
 ## <span id = "2">第一章</span>
@@ -4688,7 +4689,7 @@ IntentService是Android的一个封装类，继承自Service
 1. 调用startService方法传递请求IntentService ——> IntentServie在onCreate方法中通过HandlerThread单独开启一个线程，来依次处理所有Intent请求对象所对应的任务 ——>当执行完所有的Intent对应的任务并且没有新的Intent到达 ——> Intent自动停止
 2. 若启动IntenrService多次，那么每个耗时操作以队列的方式在IntentService的onHandleIntent回调方法中依次执行，执行完自动结束
 
-#### 四 具体实例
+### 四 具体实例
 1. 定义IntentService的子类：传入线程名称、复写onHandleIntent()方法，onHandleIntent()中根据Intent的不同进行不同的事务处理，onStartCommand方法默认实现将请求的Intent添加到工作队列中
 2. 在Manifest.xml中注册服务
 3. 在Activity中开启Service服务
@@ -4731,11 +4732,11 @@ IntentService是Android的一个封装类，继承自Service
 * 多次调用 startService(Intent) ，即多次调用onstartCommand方法，但是不会创建新的工作线程，只是把消息加入消息队列中等待执行，所以，多次启动 IntentService 会按顺序执行事件；
 * 如果服务停止，会清除消息队列中的消息，后续的事件得不到执行
 
-#### 五 使用场景
+### 五 使用场景
 1. 线程任务需要按顺序、在后台执行的使用场景——离线下载
 2. 由于所有的任务都在同一个Thread looper里面来做，所以不符合多个数据同时请求的场景。
 
-#### 六 对比
+### 六 对比
 1. IntentService与Service的区别
 * Service依赖于主线程，不能编写耗时的操作，否则会ANR
 * IntentService：创建一个工作线程来处理多线程任务
@@ -4744,4 +4745,96 @@ IntentService是Android的一个封装类，继承自Service
 * IntentService内部采用了HandlerThread实现，作用类似于后台线程；
 * 与后台线程相比，IntentService是一种后台服务，优势是：优先级高（不容易被系统杀死），从而保证任务的执行。
   * 对于后台线程，若进程中没有活动的四大组件，则该线程的优先级非常低，容易被系统杀死，无法保证任务的执行
+
+
+### <span id = "40">LRUCache</span>
+### 一 安卓中的缓存策略
+1. 缓存策略主要包括缓存的添加、获取和删除三类操作
+2. LRU：最近最少使用算法，当缓存满时，会优先淘汰最近最少使用的缓存对象。
+   * LrhCache：内存缓存
+   * DisLruCache：硬盘缓存
+
+### 二 LruCache的使用
+#### 1. 介绍
+原理：把最近使用的对象，用强引用，存储在LinkedHashMap中，当缓存满时，把最近最少使用的对象从内存中移除。并提供了get和put方法来完成
+
+#### 2. 使用
+```java
+    int maxMemory = (int) (Runtime.getRuntime().totalMemory() / 1024);
+    int cacheSize = maxMemory / 8;
+    mMemoryCache = new LruCache<String, Bitmap>(cacheSize) {
+        @Override
+        protected int sizeOf(String key, Bitmap value) {
+            return value.getRowBytes() * value.getHeight() / 1024;
+        }
+    };
+```
+1. 设置LruCache缓存的大小，一般为当前进程可用容量的1/8
+2. 重写sizeof方法，计算出要缓存的大小
+
+### 三 实现原理
+维护一个缓存对象列表，排列方式按照访问顺序实现，即一直没访问的对象放在队尾，最近访问的对象放在队头。
+#### 1. LinkedHashMap
+1. 数组+双向链表
+2. accessOrder设置为true按照访问顺序，最近访问的最后输出。
+
+#### 2. put方法
+```java
+    public final V put(K key, V value) {
+            //不可为空，否则抛出异常
+        if (key == null || value == null) {
+            throw new NullPointerException("key == null || value == null");
+        }
+        V previous;
+        synchronized (this) {
+                //插入的缓存对象值加1
+            putCount++;
+                //增加已有缓存的大小
+            size += safeSizeOf(key, value);
+            //向map中加入缓存对象
+            previous = map.put(key, value);
+                //如果已有缓存对象，则缓存大小恢复到之前
+            if (previous != null) {
+                size -= safeSizeOf(key, previous);
+            }
+        }
+            //entryRemoved()是个空方法，可以自行实现
+        if (previous != null) {
+            entryRemoved(false, key, previous, value);
+        }
+            //调整缓存大小(关键方法)
+        trimToSize(maxSize);
+        return previous;
+    }
+``` 
+在添加过缓存对象后，调用trimToSize方法来判断缓存是否已满，如果满了就删除最近最少使用的。
+
+#### 3. timeToSize
+不断地删除LinkedHashMap中队尾的元素，即近期最少访问的，直到缓存大小小于最大值。
+
+#### 4. get方法
+当调用LruCache的get()方法获取集合中的缓存对象时，就代表访问了一次该元素，将会更新队列，将访问的元素更新到队列头部，保持整个队列是按照访问顺序排序。最终会调用到recordAccess方法:先删除再移动到队列的头部
+```java
+    void recordAccess(HashMap<K,V> m) {
+        LinkedHashMap<K,V> lm = (LinkedHashMap<K,V>)m;
+        //判断是否是访问排序
+        if (lm.accessOrder) {
+            lm.modCount++;
+            //删除此元素
+            remove();
+            //将此元素移动到队列的头部
+            addBefore(lm.header);
+        }
+    }
+```
+#### 5. 总结
+LruCache维护了一个集合，LinkedHashMap。以访问顺序进行排序，当调用put方法时，就会在集合中添加元素并调用trimToSize方法判断缓存是否已经满，如果满了就用LinkedHashMap的迭代器删除队尾元素，即近期最少访问的元素。当调用get()方法访问缓存对象时，就会调用LinkedHashMap的get()方法获得对应集合元素，同时会更新该元素到队头。
+
+
+
+
+
+
+
+
 
