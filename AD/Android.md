@@ -37,6 +37,7 @@
 * #### [ContentProvider](#36)
 * #### [Socket&Https通信](#37)
 * #### [HandlerThread](#38)
+* #### [IntentService](#39)
 ## <span id = "1">快捷键</span>
 alt+enter：错误纠正
 ## <span id = "2">第一章</span>
@@ -4674,4 +4675,73 @@ name表示当前线程的名称，priority为线程的优先级别
   
 
    
-     
+
+
+### <span id = "39">IntentService</span>    
+### 一 定义
+IntentService是Android的一个封装类，继承自Service
+
+### 二 作用
+处理异步请求，实现多线程
+
+### 三 工作流程
+1. 调用startService方法传递请求IntentService ——> IntentServie在onCreate方法中通过HandlerThread单独开启一个线程，来依次处理所有Intent请求对象所对应的任务 ——>当执行完所有的Intent对应的任务并且没有新的Intent到达 ——> Intent自动停止
+2. 若启动IntenrService多次，那么每个耗时操作以队列的方式在IntentService的onHandleIntent回调方法中依次执行，执行完自动结束
+
+#### 四 具体实例
+1. 定义IntentService的子类：传入线程名称、复写onHandleIntent()方法，onHandleIntent()中根据Intent的不同进行不同的事务处理，onStartCommand方法默认实现将请求的Intent添加到工作队列中
+2. 在Manifest.xml中注册服务
+3. 在Activity中开启Service服务
+```java
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+            //同一服务只会开启一个工作线程
+            //在onHandleIntent函数里依次处理intent请求。
+
+            Intent i = new Intent("cn.scu.finch");
+            Bundle bundle = new Bundle();
+            bundle.putString("taskName", "task1");
+            i.putExtras(bundle);
+            startService(i);
+
+            Intent i2 = new Intent("cn.scu.finch");
+            Bundle bundle2 = new Bundle();
+            bundle2.putString("taskName", "task2");
+            i2.putExtras(bundle2);
+            startService(i2);
+
+            startService(i);  //多次启动
+        }
+    }
+```
+4. 工作总结
+ * 本质是采用Handler和HandlerThread方式
+ * 通过HandlerThread单独开启一个名叫IntentService的线程
+ * 创建一个名叫ServiceHandler的内部Handler
+ * 把内部Handler和HandlerThread对应的子线程进行绑定
+ * 通过onStartCommand()将intent依次插入到工作队列中，并逐个发送给onHandleIntent()
+ * 通过onHandleIntent()来依次处理所有Intent请求对象所对应的任务
+ * 因此通过复写方法onHandleIntent()，再在里面根据Intent的不同进行不同的线程操作就可以了
+
+5. 注意事项
+工作任务队列是顺序执行的，原因：
+* 由于onCreate() 方法只会调用一次，所以只会创建一个工作线程
+* 多次调用 startService(Intent) ，即多次调用onstartCommand方法，但是不会创建新的工作线程，只是把消息加入消息队列中等待执行，所以，多次启动 IntentService 会按顺序执行事件；
+* 如果服务停止，会清除消息队列中的消息，后续的事件得不到执行
+
+#### 五 使用场景
+1. 线程任务需要按顺序、在后台执行的使用场景——离线下载
+2. 由于所有的任务都在同一个Thread looper里面来做，所以不符合多个数据同时请求的场景。
+
+#### 六 对比
+1. IntentService与Service的区别
+* Service依赖于主线程，不能编写耗时的操作，否则会ANR
+* IntentService：创建一个工作线程来处理多线程任务
+* Service需要主动调用stopSelft()来结束服务，而IntentService不需要（在所有intent被处理完后，系统会自动关闭服务）
+2. IntentService与其他线程的区别
+* IntentService内部采用了HandlerThread实现，作用类似于后台线程；
+* 与后台线程相比，IntentService是一种后台服务，优势是：优先级高（不容易被系统杀死），从而保证任务的执行。
+  * 对于后台线程，若进程中没有活动的四大组件，则该线程的优先级非常低，容易被系统杀死，无法保证任务的执行
+
