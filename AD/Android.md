@@ -39,6 +39,7 @@
 * #### [HandlerThread](#38)
 * #### [IntentService](#39)
 * #### [LRUCache](#40)
+* #### [Window、Activity、DecorView以及ViewRoot之间的关系](#41)
 ## <span id = "1">快捷键</span>
 alt+enter：错误纠正
 ## <span id = "2">第一章</span>
@@ -4838,3 +4839,39 @@ LruCache维护了一个集合，LinkedHashMap。以访问顺序进行排序，�
 
 
 
+
+### <span id = "41">Window、Activity、DecorView以及ViewRoot之间的关系</span>
+#### 一 职能简介
+#### Activity
+1. 不负责视图控制，控制生命周期和处理事件
+2. Activity就像一个控制器，统筹视图的添加与显示，以及通过其他回调方法，来与Window、以及View进行交互。
+
+#### window
+1. 视图的承载器，内部持有一个DecorView，是view的根布局
+2. Window是一个抽象类，实际在Activity中持有的是其子类PhoneWindow。
+3. PhoneWindow中有个内部类DecorView，通过创建DecorView来加载Activity中设置的布局R.layout.activity_main。
+4. Window 通过WindowManager将DecorView加载其中，并将DecorView交给ViewRoot，进行视图绘制以及其他交互
+
+#### DecorView
+1. 是安卓视图树的根节点视图，
+2. 顶级view，内部包含一个竖直方向的LinearLayout，有上下三个部分，上面是个ViewStub，延迟加载的视图（应该是设置ActionBar，根据Theme设置），中间的是标题栏(根据Theme设置，有的布局没有)，下面的是内容栏。
+3. 在Activity中通过setContentView所设置的布局文件其实就是被加到内容栏之中的，成为其唯一子View
+
+#### ViewRoot
+1. view的绘制和事件分发由viewRoot来执行
+2. ViewRoot对应ViewRootImpl类，它是连接WindowManagerService和DecorView的纽带，View的三大流程（测量（measure），布局（layout），绘制（draw））均通过ViewRoot来完成。
+3. ViewRoot并不属于View树的一份子。从源码实现上来看，它既非View的子类，也非View的父类，但是，它实现了ViewParent接口，这让它可以作为View的名义上的父视图。
+4. RootView继承了Handler类，可以接收事件并分发，Android的所有触屏事件、按键事件、界面刷新等事件都是通过ViewRoot进行分发的。
+
+#### 二 DecorView的创建
+1.  先在PhoneWindow中创建了一个DecroView，其中创建的过程中可能根据Theme不同，加载不同的布局格式，例如有没有Title，或有没有ActionBar等，
+2.  然后再向mContentParent中加入子View，即Activity中设置的布局。到此位置，视图一层层嵌套添加上了。mContentParent就是@android:id/content所对应的FrameLayout。
+
+#### 三 DecorView的显示
+1. 通过setContentView()设置的界面，在onResume()之后才对用户可见
+2. ActivityThread中的handleLaunchActivity方法，调用handleResumeActivity()方法，其中执行了Activity.makeVisible()方法之后，界面才对我们是可见的。
+3. Activity.makeVisible()中的addView()方法，最终调用到setview方法，然后进行view的绘制，视图进行显示。
+
+
+#### 四 总结
+Activity就像个控制器，不负责视图部分。Window像个承载器，装着内部视图。DecorView就是个顶层视图，是所有View的最外层布局。ViewRoot像个连接器，负责沟通，通过硬件的感知来通知视图，进行用户之间的交互。
