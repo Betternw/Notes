@@ -5099,8 +5099,7 @@ onDraw()方法：无论单一View，或者ViewGroup都需要实现该方法，�
 
 
 
-
-### <span id = "44>进程间通信方式</span>
+### <span id = "44">进程间通信方式</span>
 ### 一 使用intent
 1. Activity，Service，Receiver 都支持在 Intent 中传递 Bundle 数据，而 Bundle 实现了 Parcelable 接口，可以在不同的进程间进行传输
 2. 在一个进程中启动了另一个进程的 Activity，Service 和 Receiver ，可以在 Bundle 中附加要传递的数据通过 Intent 发送出去。
