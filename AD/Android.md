@@ -42,6 +42,7 @@
 * #### [Window、Activity、DecorView以及ViewRoot之间的关系](#41)
 * #### [View测量布局及绘制原理](#42)
 * #### [Android虚拟机及编译过程](#43)
+* #### [进程间通信方式](#44)
 ## <span id = "1">快捷键</span>
 alt+enter：错误纠正
 ## <span id = "2">第一章</span>
@@ -5042,7 +5043,7 @@ onDraw()方法：无论单一View，或者ViewGroup都需要实现该方法，�
 3. 解释器根据指令集对Dalvik字节码进行解释执行
 4. 最后，根据dvm_arch参数选择编译的目标机体系结构。
 
-#### 五 安卓APK编译打包流程
+### 五 安卓APK编译打包流程
 1. Java编译器对工程本身的java代码进行编译，这些java代码有三个来源：app的源代码，由资源文件生成的R文件(aapt工具)，以及有aidl文件生成的java接口文件(aidl工具)。产出为.class文件。
    * 用AAPT编译R.java文件
    * 编译AIDL的java文件
@@ -5052,23 +5053,23 @@ onDraw()方法：无论单一View，或者ViewGroup都需要实现该方法，�
 4. 分别由Jarsigner和zipalign对apk文件进行签名和对齐，生成最终的apk文件。
 总结：编译 ——> DEX ——> 打包 ——> 签名和对齐
 
-#### 六 ART虚拟机和Dalvik虚拟机的区别
-##### 1. 什么是ART
+### 六 ART虚拟机和Dalvik虚拟机的区别
+#### 1. 什么是ART
 1. ART代表Android Runtime，其处理应用程序执行的方式完全不同于Dalvik，
 2. Dalvik是依靠一个Just-In-Time (JIT)编译器去解释字节码。开发者编译后的应用代码需要通过一个解释器在用户的设备上运行，这一机制并不高效，但让应用能更容易在不同硬件和架构上运行 —— 需要一个解释器来解释字节码
 3. ART在应用安装时就预编译字节码到机器语言，这一机制叫Ahead-Of-Time (AOT）编译
 
-##### 2. ART优点
+#### 2. ART优点
 1. 系统性能的显著提升
 2. 应用启动更快、运行更快、体验更流畅、触感反馈更及时
 3. 更长的电池续航能力
 4. 支持更低的硬件
 
-##### 3. ART缺点
+#### 3. ART缺点
 1. 更大的存储空间占用，大约10%-20%
 2. 更长的应用安装时间
 
-##### 4. ART虚拟机相对于Dalvik虚拟机的提升
+#### 4. ART虚拟机相对于Dalvik虚拟机的提升
 1. 预编译
    * 使用了AOT直接在安装时将其翻译成机器语言，提高了虚拟机的指令执行速度
 
@@ -5089,8 +5090,53 @@ onDraw()方法：无论单一View，或者ViewGroup都需要实现该方法，�
 2.4 总结
     Dalvik会挂起所有的线程，但是ART中gc会要求程序在分配空间的时候标记自身的堆栈，在标记的时候不会挂起线程，是间断性的挂起的。ART通过标记时机的变更使中断和阻塞的时间更短.
 
-3. 提高内存使用，减少碎片化
+3. 提高内存使用，减少碎片化 
     * Dalvik内存管理特点是:内存碎片化严重，当然这也是Mark and Sweep算法带来的弊端。
     * ART的解决：在ART中，它将Java分了一块空间命名为Large-Object-Space，这块内存空间的引入用来专门存放large object。LOS专供Bitmap使用,los解决了大对象的内存分配和存储问题。
     * ART又引入了moving collector的技术，即将不连续的物理内存块进行对齐。将内存压缩后使内存空间更加紧凑。
     * Large-Object-Space的引入是因为moving collector对大块内存的位移时间成本太高。根官方统计，ART的内存利用率提高10倍了左右，大大提高了内存的利用率。
+
+
+
+
+
+### <span id = "44>进程间通信方式</span>
+### 一 使用intent
+1. Activity，Service，Receiver 都支持在 Intent 中传递 Bundle 数据，而 Bundle 实现了 Parcelable 接口，可以在不同的进程间进行传输
+2. 在一个进程中启动了另一个进程的 Activity，Service 和 Receiver ，可以在 Bundle 中附加要传递的数据通过 Intent 发送出去。
+
+### 二 使用文件共享
+1. Windows 上，一个文件如果被加了排斥锁会导致其他线程无法对其进行访问，包括读和写；而 Android 系统基于 Linux ，使得其并发读取文件没有限制地进行，甚至允许两个线程同时对一个文件进行读写操作，尽管这样可能会出问题
+2. 可以在一个进程中序列化一个对象到文件系统中，在另一个进程中反序列化恢复这个对象（注意：并不是同一个对象，只是内容相同
+3. SharedPreferences 是个特例，系统对它的读 / 写有一定的缓存策略，即内存中会有一份 ShardPreferences 文件的缓存，系统对他的读 / 写就变得不可靠，当面对高并发的读写访问，SharedPreferences 有很多大的几率丢失数据。因此，IPC 不建议采用 SharedPreferences
+
+### 三 使用Messager
+1. Messenger 是一种轻量级的 IPC 方案，它的底层实现是 AIDL ，可以在不同进程中传递 Message 对象，它一次只处理一个请求
+2. 服务端进程：服务端创建一个 Service 来处理客户端请求，同时通过一个 Handler 对象来实例化一个 Messenger 对象，然后在 Service 的 onBind 中返回这个 Messenger 对象底层的 Binder 
+3. 客户端进程：首先绑定服务端 Service ，绑定成功之后用服务端的 IBinder 对象创建一个 Messenger ，通过这个 Messenger 就可以向服务端发送消息了，消息类型是 Message 。如果需要服务端响应，则需要创建一个 Handler 并通过它来创建一个 Messenger（和服务端一样），并通过 Message 的 replyTo 参数传递给服务端。服务端通过 Message 的 replyTo 参数就可以回应客户端了
+4. 客户端和服务端是通过拿到对方的 Messenger 来发送 Message 的。只不过客户端通过 bindService onServiceConnected 而服务端通过 message.replyTo 来获得对方的 Messenger 。Messenger 中有一个 Hanlder 以串行的方式处理队列中的消息。不存在并发执行，因此不用考虑线程同步的问题
+
+### 四 使用ALDL
+1. Messenger 是以串行的方式处理客户端发来的消息，如果大量消息同时发送到服务端，服务端只能一个一个处理，所以大量并发请求就不适合用 Messenger ，而且 Messenger 只适合传递消息，不能跨进程调用服务端的方法
+2. AIDL 可以解决并发和跨进程调用方法的问题，要知道 Messenger 本质上也是 AIDL ，只不过系统做了封装方便上层的调用而已。
+3. 支持的数据类型：string、charsequence、ArrayList、hashmap、parcelable、aldl接口
+4. 服务端：服务端创建一个 Service 用来监听客户端的连接请求，然后创建一个 AIDL 文件，将暴露给客户端的接口在这个 AIDL 文件中声明，最后在 Service 中实现这个 AIDL 接口即可
+5. 客户端：绑定服务端的 Service ，绑定成功后，将服务端返回的 Binder 对象转成 AIDL 接口所属的类型，然后就可以调用 AIDL 中的方法了。客户端调用远程服务的方法，被调用的方法运行在服务端的 Binder 线程池中，同时客户端的线程会被挂起，如果服务端方法执行比较耗时，就会导致客户端线程长时间阻塞，导致 ANR 。客户端的 onServiceConnected 和 onServiceDisconnected 方法都在 UI 线程中
+
+### 五 使用ContentProvider
+1. 用于不同应用间数据共享，和 Messenger 底层实现同样是 Binder 和 AIDL， 系统预置了许多 ContentProvider ，如通讯录、日程表，需要跨进程访问。
+2. 使用方法：继承 ContentProvider 类实现 6 个抽象方法，这六个方法均运行在 ContentProvider 进程中，除 onCreate 运行在主线程里，其他五个方法均由外界回调运行在 Binder 线程池中。
+3. ContentProvider 的底层数据，可以是 SQLite 数据库，可以是文件，也可以是内存中的数据
+
+### 六 使用Socket
+1. 常用的 Socket 类型有两种：流式 Socket（SOCK_STREAM）和数据报式 Socket（SOCK_DGRAM）。流式是一种面向连接的 Socket，针对于面向连接的 TCP 服务应用；数据报式 Socket 是一种无连接的 Socket ，对应于无连接的 UDP 服务应用。
+2. Tcp/Ip五层网络模型：应用层、传输层（端到端）、网络层（主机到主机）、数据链路层、物理层
+3. socket连接应用层和传输层
+4. Socket：
+   * 通过，ip定位电脑，端口号定位程序。
+   * UDP：封装发送。不安全的通信协议。
+   * TCP：持续性输送消息。流。
+5. Http和Socket的区别
+   * Http用于应用层，无状态协议
+   * Socket用于传输层：可以自己定义协议，灵活性更高，实现Client和Server的通信。
+6. https：更加安全
