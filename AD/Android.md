@@ -35,7 +35,7 @@
 * #### [Service](#34)
 * #### [ALDL实现远程服务的通信](#35)
 * #### [ContentProvider](#36)
-* #### [Socket&Https通信](#37)
+* #### [Bitmap压缩策略](#37)
 * #### [HandlerThread](#38)
 * #### [IntentService](#39)
 * #### [LRUCache](#40)
@@ -4580,15 +4580,30 @@ getContentResolver().unregisterContentObserver（uri）；
 ### 五 优点
 1. 应用间数据交互可以根据需求将自己的数据开放给其他应用进行增删改查，不用担心因为直接开发数据库权限而带来安全问题。
 2. 采用不同的存储方式存储数据，数据的访问方式也会不同。比如文件操作读写文件方式存储的数据，sharedpreferences API读写Sharedpreferences 共享数据。而采用ContentProvider方式，，使得无论底层数据存储采用何种方式，外界对数据的访问方式都是统一的。
-###  <span id = "37">Socket&Https通信</span>
-1. Socket：
-   * 通过，ip定位电脑，端口号定位程序。
-   * UDP：封装发送。不安全的通信协议。
-   * TCP：持续性输送消息。流。
-2. Http和Socket的区别
-   * Http用于应用层，无状态协议
-   * Socket用于传输层：可以自己定义协议，灵活性更高，实现Client和Server的通信。
-3. https：更加安全
+###  <span id = "37">Bitmap压缩策略</span>
+
+### 一 为什么bitmap需要高效加载
+1. 高清大图的加载很容易造成内存溢出，因此需要高效加载
+2. Imageview有时无法显示原始图片，可以按照一定的采样率来将图片缩小后再加载进来。
+
+### 二 bitmap高效加载的具体方式
+#### 1. 加载bitmap的方式
+bitmapFactory提供四类方法，分别从文件系统、资源、输入流和字节数组中加载bitmap对象
+#### 2. BitmapFactory.Options的参数
+1. inSampleSize参数
+   * 采样率，设置图片的像素的宽和高
+   * 值 = 1，即为原始大小
+   * 值 > 1,图片缩小，缩放比例为1/（值的二次方）
+   * 关于inSampleSize取值的注意事项： 通常是根据图片宽高实际的大小/需要的宽高大小，分别计算出宽和高的缩放比。但应该取其中最小的缩放比，避免缩放图片太小，到达指定控件中不能铺满，需要拉伸从而导致模糊。
+2. inJustDecodeBounds参数
+   * 不加载图片就想获取到图片的宽高信息的时候，通过inJustDecodeBounds=true，然后加载图片就可以实现只解析图片的宽高信息，并不会真正的加载图片，
+   * 当获取了宽高信息，计算出缩放比后，然后在将inJustDecodeBounds=false,再重新加载图片，就可以加载缩放后的图片。
+3. 高效加载bitmap的流程
+   * 将BitmapFactory.Options的inJustDecodeBounds参数设为true并加载图片。
+   * 从BitmapFactory.Options中取出图片的原始宽高信息，它们对应于outWidth和outHeight参数。
+   * 根据采样率的规则并结合目标View的所需大小计算出采样率inSampleSize。
+   * 将BitmapFactory.Options的inJustDecodeBounds参数设为false，然后重新加载图片。
+
 ###  <span id = "38">HandlerThread</span>
 ### 一 使用场景
 1. 执行耗时操作需要开启子线程，线程的开启和销毁很消耗性能，因此可以使用线程池或者使用HandlerThread
