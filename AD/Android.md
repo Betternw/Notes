@@ -4890,6 +4890,7 @@ Activity就像个控制器，不负责视图部分。Window像个承载器，装
 1. view的绘制是从上往下一层层迭代下来的，自上而下遍历DecorView-->ViewGroup（--->ViewGroup）-->View ，按照这个流程从上往下，依次measure(测量),layout(布局),draw(绘制)。
 
 #### 二 Measure流程
+在某些情况下，需要多次测量才能确定view最终的宽高，在该情况下，measure过程后得到的宽高可能不准确，此时建议在layout过程中onLayout去获取最终的宽高
 1. performMeasure -> measure -> onMeasure -> Measure
 2. measure，就是测量每个控件的大小
 3. 调用measure()方法，进行一些逻辑处理，然后调用onMeasure()方法，在其中调用setMeasuredDimension()设定View的宽高信息，完成View的测量操作。
@@ -4901,4 +4902,108 @@ protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
 ```
 在获取widthMeasureSpec, heightMeasureSpec这两个参数信息后，调用setMeasureDimension方法，指定view的宽高，完成测量工作
 
-** MeasureSpec的确定 ** 
+#### MeasureSpec的确定
+1. 组成
+   * MeasureSpec(测量规格，32位的int值) = mode（测量模式 高2位即31、32位） + size（具体测量大小 底30位）
+   * mode模式
+     * UNSPECIFIED ：（不限制）不对View进行任何限制，要多大给多大，一般用于系统内部
+     * EXACTLY：（精确数值）对应LayoutParams中的match_parent和具体数值这两种模式。检测到View所需要的精确大小，这时候View的最终大小就是SpecSize所指定的值，
+     * AT_MOST ：（占满父容器）对应LayoutParams中的wrap_content。View的大小不能大于父容器的大小。
+2. MeasureSpec的确定
+    * DecorView：根据LayoutParams的布局格式（match_parent，wrap_content或指定大小），将自身大小和屏幕大小相比，设置一个不超过屏幕大小的宽高。—— 通过屏幕的大小，和自身的布局参数LayoutParams。
+    * 其他view：通过父布局的MeasureSpec和自身的布局参数LayoutParams
+      * 父布局是EXACTLY：子布局为EXACTLY时为自身具体大小，其他模式是父view的剩余尺寸
+      * 父布局是AT_MOST：子布局为EXACTLY时为自身具体大小，其他模式是父view的剩余尺寸
+        * wrapparent和matchparent都是父view的剩余尺寸，为了显示区别，在自定义View时，需要重写onMeasure方法，处理wrap_content时的情况，进行特别指定。
+      * 父布局是UNSPECIFIED：子布局为EXACTLY时为自身具体大小，剩下Matchparent和wrapparent都是0
+    * 可以看出MeasureSpec的指定也是从顶层布局开始一层层往下去，父布局影响子布局
+3. view的测量流程
+开始测量 ——> measure ——> onMeasure(在viewGroup中需要重写此方法，在此方法中定义自己的测量方式，一般的测量步骤：先遍历测量group中各个子view，根据子view的测量值定义自己的宽高信息。通过计算整个ViewGroup中各个View的属性，从而最终确定整个ViewGroup的属性；最后setMeasuredDimension()方法存储测量后view宽高的值) ——> measureChildren(循环遍历每个子view测量，不需要重写) ——> 如果是viewGroup再回到measure处，直到为view时 ——> measure ——> onMeasure(可能会重写onMeasure方法，对wrapcontent情况设置)
+
+
+#### 三 Layout流程
+测量完view后，需要将view布局在window中，view的布局主要通过确定上下左右四个点来确定的。
+布局也是自上而下，不同的是ViewGroup先在layout()中确定自己的布局，然后在onLayout方法中再调用子view的Layout方法，确定子view布局。在Measure过程中，ViewGroup一般是先测量子View的大小，然后再确定自身的大小。
+```java
+public void layout(int l, int t, int r, int b) {  
+
+    // 当前视图的四个顶点
+    int oldL = mLeft;  
+    int oldT = mTop;  
+    int oldB = mBottom;  
+    int oldR = mRight;  
+
+    // setFrame（） / setOpticalFrame（）：确定View自身的位置
+    // 即初始化四个顶点的值，然后判断当前View大小和位置是否发生了变化并返回  
+ boolean changed = isLayoutModeOptical(mParent) ?
+            setOpticalFrame(l, t, r, b) : setFrame(l, t, r, b);
+
+    //如果视图的大小和位置发生变化，会调用onLayout（）
+    if (changed || (mPrivateFlags & PFLAG_LAYOUT_REQUIRED) == PFLAG_LAYOUT_REQUIRED) {  
+
+        // onLayout（）：确定该View所有的子View在父容器的位置     
+        onLayout(changed, l, t, r, b);      
+  ...
+
+}
+```
+onLayout():确定子View的布局，如果当前view是一个单一的view没有子view就不需要实现该方法。如果当前view是一个viewgroup，就需要实现onLayout方法。
+
+view的布局流程
+开始布局 ——> layout ——> setFrame(确定自己在布局中的位置) ——> onLayout(当前是viewgroup此方法需要重写。其中关键逻辑循环调用child.layout方法，来确定子view在当前viewGroup中的位置布局) ——> child.Layout ——> 当不是viewgroup时，——> setFrame ——> onLayout（没有子view就是空实现）——> 布局完毕
+
+#### 四 Draw过程
+1. 绘制过程
+   * 绘制背景 background.draw(canvas)
+   * 绘制自己（onDraw）
+   * 绘制Children(dispatchDraw)
+   * 绘制装饰（onDrawScrollBars）
+```java
+public void draw(Canvas canvas) {
+// 所有的视图最终都是调用 View 的 draw （）绘制视图（ ViewGroup 没有复写此方法）
+// 在自定义View时，不应该复写该方法，而是复写 onDraw(Canvas) 方法进行绘制。
+// 如果自定义的视图确实要复写该方法，那么需要先调用 super.draw(canvas)完成系统的绘制，然后再进行自定义的绘制。
+    ...
+    int saveCount;
+    if (!dirtyOpaque) {
+          // 步骤1： 绘制本身View背景
+        drawBackground(canvas);
+    }
+
+        // 如果有必要，就保存图层（还有一个复原图层）
+        // 优化技巧：
+        // 当不需要绘制 Layer 时，“保存图层“和“复原图层“这两步会跳过
+        // 因此在绘制的时候，节省 layer 可以提高绘制效率
+        final int viewFlags = mViewFlags;
+        if (!verticalEdges && !horizontalEdges) {
+
+        if (!dirtyOpaque) 
+             // 步骤2：绘制本身View内容  默认为空实现，  自定义View时需要进行复写
+            onDraw(canvas);
+
+        ......
+        // 步骤3：绘制子View   默认为空实现 单一View中不需要实现，ViewGroup中已经实现该方法
+        dispatchDraw(canvas);
+
+        ........
+
+        // 步骤4：绘制滑动条和前景色等等
+        onDrawScrollBars(canvas);
+
+       ..........
+        return;
+    }
+    ...    
+}
+
+```
+自定义View一般要重写onDraw()方法，在其中绘制不同的样式。
+在ViewGroup中，实现了 dispatchDraw()方法，而在单一子View中不需要实现该方法。
+
+2. 流程
+开始绘制 ——> draw ——> drawBackgroud ——> onDraw ——>(绘制自己是空方法，无论是单一view还是viewgroup都需要自定义实现)  ——> dispatchDraw(将绘制事件分发给子view让子view进行绘制) ——> onDrawScrollBars（绘制装饰） ——> 绘制完毕
+
+#### 五 总结
+onMeasure()方法：单一View，一般重写此方法，针对wrap_content情况，规定View默认的大小值，避免于match_parent情况一致；ViewGroup，若不重写，就会执行和单子View中相同逻辑，不会测量子View。一般会重写onMeasure()方法，循环测量子View。（先测量子view再确定viewgroup）
+onLayout()方法: 单一View，不需要实现该方法。ViewGroup必须实现，该方法是个抽象方法，实现该方法，来对子View进行布局。（先确定group布局再确定子view布局）
+onDraw()方法：无论单一View，或者ViewGroup都需要实现该方法，因其是个空方法。自定义view需要自己在其中进行绘制。
