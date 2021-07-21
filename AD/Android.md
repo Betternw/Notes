@@ -40,6 +40,7 @@
 * #### [IntentService](#39)
 * #### [LRUCache](#40)
 * #### [Window、Activity、DecorView以及ViewRoot之间的关系](#41)
+* #### [View测量布局及绘制原理](#42)
 ## <span id = "1">快捷键</span>
 alt+enter：错误纠正
 ## <span id = "2">第一章</span>
@@ -4840,6 +4841,14 @@ LruCache维护了一个集合，LinkedHashMap。以访问顺序进行排序，�
 
 
 
+
+
+
+
+
+
+
+
 ### <span id = "41">Window、Activity、DecorView以及ViewRoot之间的关系</span>
 #### 一 职能简介
 #### Activity
@@ -4875,3 +4884,21 @@ LruCache维护了一个集合，LinkedHashMap。以访问顺序进行排序，�
 
 #### 四 总结
 Activity就像个控制器，不负责视图部分。Window像个承载器，装着内部视图。DecorView就是个顶层视图，是所有View的最外层布局。ViewRoot像个连接器，负责沟通，通过硬件的感知来通知视图，进行用户之间的交互。
+
+### <span id = "42">View测量布局及绘制原理</span>
+#### 一 view绘制的流程框架
+1. view的绘制是从上往下一层层迭代下来的，自上而下遍历DecorView-->ViewGroup（--->ViewGroup）-->View ，按照这个流程从上往下，依次measure(测量),layout(布局),draw(绘制)。
+
+#### 二 Measure流程
+1. performMeasure -> measure -> onMeasure -> Measure
+2. measure，就是测量每个控件的大小
+3. 调用measure()方法，进行一些逻辑处理，然后调用onMeasure()方法，在其中调用setMeasuredDimension()设定View的宽高信息，完成View的测量操作。
+```java
+protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        setMeasuredDimension(getDefaultSize(getSuggestedMinimumWidth(), widthMeasureSpec),
+                getDefaultSize(getSuggestedMinimumHeight(), heightMeasureSpec));
+    }
+```
+在获取widthMeasureSpec, heightMeasureSpec这两个参数信息后，调用setMeasureDimension方法，指定view的宽高，完成测量工作
+
+** MeasureSpec的确定 **
