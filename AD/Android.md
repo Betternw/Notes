@@ -4901,4 +4901,4 @@ protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
 ```
 在获取widthMeasureSpec, heightMeasureSpec这两个参数信息后，调用setMeasureDimension方法，指定view的宽高，完成测量工作
 
-** MeasureSpec的确定 **
+** MeasureSpec的确定 ** 
