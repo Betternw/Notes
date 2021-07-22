@@ -19,7 +19,7 @@
 ### * [数据存储](#18)
  * #### [本地文件操作](#19)
  * #### [数据库操作](#20)
- * #### [手风琴特效](#21)
+ * #### [Context详解](#21)
  * #### [BroadcastReceiver](#22)
  * #### [Application全局应用](#23)
 ### * [框架](#24)
@@ -2955,22 +2955,71 @@ public class StudentDao {
     }
 
 ```
-###  <span id = "21">手风琴特效——ExpandableListView</span>
-1. 基本介绍  ExpandableListView-Imooc
-   * 和ListView区别
-      * 继承自ListView
-      * 可扩展可收缩可分组
-   * 应用于按照关键字进行分组，比如联系人列表等
-2. 常用属性
-   * groupIndicator：分组指示器 一个item 
-   * childIndicator
-   * childDivider：设置分割线
-3. 常用方法
-   * setAdapter：适配器
-   * setOnGroupClickListener：点击分组条目的回调
-   * setOnChildClickListener：点击childItem的回调
-   * setOnGroupCollapseListener：点击group收缩的回调
-   * setOnGroupExpandListener：点击group展开的回调
+###  <span id = "21">Context详解</span>
+#### 一 Context定义
+1. 指上下文环境，理解为当前对象在程序中所处的一个环境，一个与系统交互的过程。
+2. Context在加载资源、启动Activity、获取系统服务、创建View等操作都要参与
+3. Context的具体实现子类就是：Activity，Service，Application
+4. Context数量=Activity数量+Service数量+1
+
+#### 二 Context作用及作用域
+1. Broadcast Receiver，Content Provider并不是Context的子类，他们所持有的Context都是其他地方传过去的。弹出Toast、启动Activity、启动Service、发送广播、操作数据库等等都需要用到Context
+2. 弹出dialog是需要在一个Activity上弹出，因此这种情况只能使用Activity类型的Context，不能使用Application和Service类型的
+3. layout inflate：在Application和Service中也是合法的，但是会使用系统默认的主题样式，如果你自定义了某些样式可能不会被使用
+4. start an Activity：非Activity类型的Context没有所谓的任务栈，待启动的Activity找不到栈。如果指定标记位那么会在启动的时候创建一个新的任务栈，这样不推荐。
+5. 总结：与UI相关的，应该使用Activity做为Context来处理（否则是默认样式）；其他的一些操作，Service,Activity,Application等实例都可以
+
+#### 三 获取Context
+1. View.getContext()：获取当前view对象的Context对象，即当前正在展示的Activity对象
+2. Activity.getApplicationContext()：获取当前Activity所在的应用进程的Context对象
+3. ContextWrapper.getBaseContext()
+4. Activity.this 返回当前的Activity实例，如果是UI控件需要使用Activity作为Context对象，但是默认的Toast实际上使用ApplicationContext也可以。
+##### getApplicaion和getApplicationContext
+1. 打印出的内存地址是相同的，是同一个对象，因为Application本身就是一个Context
+2. 区别：getApplication（）只有在Activity和Service中才能调用到，如果像BroadCastReceiver中也想获得Application的实例，就需要使用ApplicationContext。
+
+#### 四 Context引起的内存泄露
+##### 错误的单例模式
+```java
+    public class Singleton {
+        private static Singleton instance;
+        private Context mContext;
+
+        private Singleton(Context context) {
+            this.mContext = context;
+        }
+
+        public static Singleton getInstance(Context context) {
+            if (instance == null) {
+                instance = new Singleton(context);
+            }
+            return instance;
+        }
+    }
+```
+instance作为静态对象生命周期比普通的对象包括Activity都要长，Activity如果getInstance获得该对象，那么这个单例就会持有传入的Activity对象，当Activiy被销毁掉，但是他的引用还存在与一个单例中，不可能被gc掉，会导致内存泄露。
+
+##### view持有Activity引用
+```java
+    public class MainActivity extends Activity {
+        private static Drawable mDrawable;
+
+        @Override
+        protected void onCreate(Bundle saveInstanceState) {
+            super.onCreate(saveInstanceState);
+            setContentView(R.layout.activity_main);
+            ImageView iv = new ImageView(this);
+            mDrawable = getResources().getDrawable(R.drawable.ic_launcher);
+            iv.setImageDrawable(mDrawable);
+        }
+    }
+```
+静态的drawable对象被设置入imageview中，而new ImageView时传入的this是Activity的Context，相当于这个activity是静态变量drawable的间接引用，当activity被销毁时也不能被gc掉。
+
+##### 正确使用Context
+1. 当Application的Context能搞定的情况下，并且生命周期长的对象，优先使用Application的Context。因为Application的Context是随着进程存在的
+2. 不要让生命周期长于Activity的对象持有到Activity的引用
+3. 尽量不要在Activity中使用非静态内部类，因为非静态内部类会隐式持有外部类实例的引用，如果使用静态内部类，将外部实例引用作为弱引用持有
 ###  <span id = "22">BroadcastReceiver 广播接收器</span>
 ### 一、定义
 1. 四大组件之一，属于一个全局的监听器
