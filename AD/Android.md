@@ -26,7 +26,7 @@
 * #### [OkHttp](#25)
 * #### [EventBus](#26)
 * #### [RecyclerView](#27)
-* #### [Glide](#28)
+* #### [Mvp模式](#28)
 * #### [GreenDao](#29)
 * #### [极光推送](#30)
 * #### [WebView浏览器组件](#31)
@@ -3317,94 +3317,15 @@ instance作为静态对象生命周期比普通的对象包括Activity都要长�
    * 准备被展示的数据
    * 适配器连接数据和视图（展示的逻辑等 Adapter+ViewHolder）
    * LayoutManager控制视图的展示形式（抽象类，有实例化的类）
-###  <span id = "28">Glide 第三方组件加载库</span>
-1. 加载图片的种类
-   * 资源文件中的图片
-   * 手机中的图片
-   * 网络中的图片
-2. 加载图片的步骤
-   * 明确图片的地址
-   * 将图片转换为可被加载的对象
-   * 通过图片加载控件展示图片
-3. 图片加载库
-4. 使用Glide进行加载
-```java
-  /**
-     * 使用Glide加载网络图片
-     * @param img 网络图片地址
-     */
-    private void glideLoadImage (String img) {
-//      4. 通过 RequestOptions 对象来设置Glide的配置
-        RequestOptions options = new RequestOptions()
-//                设置图片变换为圆角
-                .circleCrop()
-//                设置站位图
-                .placeholder(R.mipmap.loading)
-//                设置加载失败的错误图片
-                .error(R.mipmap.loader_error);
-
-//      1. Glide.with 会创建一个图片的实例，接收 Context、Activity、Fragment
-        Glide.with(this)
-//                2. 指定需要加载的图片资源，接收 Drawable对象、网络图片地址、本地图片文件、资源文件、二进制流、Uri对象等等
-                .load(img)
-//                指定配置
-                .apply(options)
-//                3. 用于展示图片的ImageView
-                .into(mIv);
-    }
-```
-5. Generated API全局配置——为glide提供自定义选项，将配置打包。
-   * 引入Generated API支持库
-   * 创建类，继承AppGlideModule并添加@GlideModule注解
-   ```java
-   @GlideModule
-    public class MyAppGlideModule extends AppGlideModule {
-    }
-
-   ```
-   * 创建类，添加@GlideExtension注解，并实现private构造函数
-   ```java
-   
-    @GlideExtension
-    public class MyGlideExtension{
-
-        /**
-        * 实现private的构造函数
-        */
-        private MyGlideExtension() {
-        }
-
-        @GlideOption
-        public static void injectOptions (RequestOptions options) {
-            options
-    //                设置图片变换为圆角
-                    .circleCrop()
-    //                设置站位图
-                    .placeholder(R.mipmap.loading)
-    //                设置加载失败的错误图片
-                    .error(R.mipmap.loader_error);
-
-        }
-    }
-   ```
-   ```java
-     private void glideAppLoadImage (String img) {
-        /**
-         * 不想每次都通过 .apply(options) 的方式来进行配置的时候，可以使用GlideApp的方式来进行全局统一的配置
-         * 需要注意以下规则：
-         * 1、引入 repositories {mavenCentral()}  和 dependencies {annotationProcessor 'com.github.bumptech.glide:compiler:4.8.0'}
-         * 2、集成 AppGlideModule 的类并且通过 @GlideModule 进行了注解
-         * 3、有一个使用了 @GlideExtension 注解的类 MyGlideExtension，并实现private的构造函数
-         * 4、在 MyGlideExtension 可以通过被 @GlideOption 注解了的静态方法来添加可以被GlideApp直接调用的方法，该方法默认接受第一个参数为：RequestOptions
-         */
-            GlideApp.with(this)
-                    .load(img)
-        //               调用在MyGlideExtension中实现的，被@GlideOption注解的方法，不需要传递 RequestOptions 对象
-                    .injectOptions()
-                    .into(mIv);
-            }
-
-   ```
+###  <span id = "28">Mvp模式</span>
+#### 一 MVP概述
+1. MVC：M—业务逻辑和实体模型  V—view，布局文件 C—Controllor，对应于Activity。关于布局中的数据绑定的操作在Activity中，View处理的很少，造成了Activity既像View又像Controller，使得Activity变得臃肿
+2. MVP：M—业务逻辑和实体模型，V—Activity，负责view的绘制和用户交互，P—presenter，负责V和M之间的交互
+3. 总结：
+* MVP模式通过Presenter实现数据和视图之间的交互，简化了Activity的职责。同时即避免了View和Model的直接联系，又通过Presenter实现两者之间的沟通。
+* 减少了Activity的职责，简化了Activity中的代码，将复杂的逻辑代码提取到了Presenter中进行处理，模块职责划分明显，层次清晰。与之对应的好处就是，耦合度更低，更方便的进行测试
+* Presenter中同时持有View层的Interface的引用以及Model层的引用，View层持有Presenter层引用
+* 当View层某个界面需要展示某些数据的时候，首先会调用Presenter层的引用，然后Presenter层会调用Model层请求数据，当Model层数据加载成功之后会调用Presenter层的回调方法通知Presenter层数据加载情况，最后Presenter层再调用View层的接口将加载后的数据展示给用户。
 ###  <span id = "29">GreenDao</span>
 1. ORM框架——在关系型数据库和对象之间做一个映射，就不需要操作sql语句。
 2. GreenDao
