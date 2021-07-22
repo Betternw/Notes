@@ -14,7 +14,7 @@
  * #### [AsyncTask异步任务](#13)
 ### * [高级控件](#14)
  * #### [动画总结](#15)
- * #### [CardView](#16)
+ * #### [进程优先级](#16)
  * #### [屏幕适配](#17)
 ### * [数据存储](#18)
  * #### [本地文件操作](#19)
@@ -2232,22 +2232,31 @@ main_tab_icon_home.xml:
 
 3. TimeInterPolator介绍
 控制动画变化的节奏，通过setInterpolator 设置不同的Interpolator
-###  <span id = "16"> CardView</span>
-1. 使用时需要导入包，继承自FrameLayout
-* File——project structure——dependcies—— + library dependency——cardview 记得调整版本
-* build.gradle中：
-```java
-    implementation 'com.android.support:cardview-v7:26.1.0'
-```
-2. 常用属性
-   * cardBackgroundColor：背景色
-   * cardCoornerRadius：设置圆角半径
-   * contentPadding：设置内部padding
-   * cardElevation：设置阴影大小
-   * cardUseCompatPadding：默认为false，true 添加额外的padding绘制阴影
-   * cardPreventCornerOverlap：默认为true，添加额外的padding，防止内容和圆角重叠
-3. 使用
-   * 在控件外添加： android.support.v7.widget.CardView
+###  <span id = "16"> 进程优先级</span>
+当系统内存不足时，安卓系统将根据进程的优先级选择杀死一些不太重要的进程，优先级低的先杀死。
+进程优先级从高到低：前台进程、可视进程、服务进程、后台进程、空进程
+#### 前台进程
+* 处于正在与用户交互的activity
+* 与前台activity绑定的service
+* 调用了startForeground方法的service
+* 正在执行oncreate（），onstart（），ondestroy方法的 service
+* 进程中包含正在执行onReceive（）方法的BroadcastReceiver
+系统中的前台进程并不会很多，而且一般前台进程都不会因为内存不足被杀死。特殊情况除外。当内存低到无法保证所有的前台进程同时运行时，才会选择杀死某个进程。
+
+#### 可视进程
+* 为处于前台，但仍然可见的activity（例如：调用了onpause（）而还没调用onstop（）的activity）。典型情况是：运行activity时，弹出对话框（dialog等），此时的activity虽然不是前台activity，但是仍然可见
+* 可见activity绑定的service。（处于上诉情况下的activity所绑定的service）
+
+#### 服务进程
+* 已经启动的service
+
+#### 后台进程
+* 不可见的activity（调用onstop（）之后的activity）
+* 后台进程不会影响用户的体验，为了保证前台进程，可视进程，服务进程的运行，系统随时有可能杀死一个后台进程。当一个正确实现了生命周期的activity处于后台被杀死时，如果用户重新启动，会恢复之前的运行状态。
+
+#### 空进程
+* 任何没有活动的进程
+空进程的存在无非为了一些缓存，以便于下次可以更快的启动。
 
 #### 二 传统动画和属性动画
 1. 属性动画实现了view的真正移动，补间动画对view的移动类似在不同的地方绘制了一个影子，实际的对象还是处于原来的地方
