@@ -1,5 +1,5 @@
 ## 目录
-### * [快捷键](#1)
+### * [性能优化总结](#1)
 ### * [第一章 杂](#2)
 ### * [UI基础](#3)     
 ### * [常用组件](#4)
@@ -43,8 +43,31 @@
 * #### [View测量布局及绘制原理](#42)
 * #### [Android虚拟机及编译过程](#43)
 * #### [进程间通信方式](#44)
-## <span id = "1">快捷键</span>
-alt+enter：错误纠正
+## <span id = "1"> 性能优化总结</span>
+### 一 布局优化
+1. 删除布局中无用的控件和层次，选择性能比较低的viewFroup
+2. 采用标签，viewStub
+   * 标签主要用于布局重用，可以减少布局的层级
+   * viewStub可以进行按需加载，当需要时才会将VIewStub的布局加载到内存，提高了初始化效率
+3. 避免过度绘制
+   * 移除不必要的背景
+   * 自定义控件使用 clipRect() 和 quickReject() 优化。即设置一个绘制区域，
+
+### 二 绘制优化
+1. onDraw中不要创建新的局部对象，因为此方法会被频繁调用，一瞬间会产生大量的临时对象，不仅占用了过多的内存还会导致系统更加频繁gc，降低了程序的执行效率
+2. onDraw方法中不要做耗时任务，也不要进行循环操作
+
+### 三 内存泄露优化
+### 四 ListView/RecycleView以及bitmap优化
+ListView/RecycleView的优化：
+1. 使用ViewHolder——缓存了显示数据的视图，如果convertView值为null时，会根据xml为进行赋值，并且生成一个viewholder来绑定converView中的每个view控件，然后将viewHolder设置到Tag中。当convertView不为空的时候，就会直接用convertView的getTag来获得一个ViewHolder。
+2. 异步加载：耗时的操作放在异步线程中
+
+bitmap优化:
+对图片进行压缩
+
+### 五 线程优化
+1. 采用线程池，重用其中的线程
 ## <span id = "2">第一章</span>
 1. android系统架构：Linux内核层、系统运行库层、应用框架层（API）、应用层）
 2. adb指令：
