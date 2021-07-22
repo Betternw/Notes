@@ -1,6 +1,6 @@
 ## 目录
 ### * [性能优化总结](#1)
-### * [第一章 杂](#2)
+### * [内存泄露汇总](#2)
 ### * [UI基础](#3)     
 ### * [常用组件](#4)
  * #### [Activity](#5)
@@ -27,7 +27,7 @@
 * #### [EventBus](#26)
 * #### [RecyclerView](#27)
 * #### [Mvp模式](#28)
-* #### [GreenDao](#29)
+* #### [<include merge>和viewStub](#29)
 * #### [极光推送](#30)
 * #### [WebView浏览器组件](#31)
 * #### [ButterKnife实现View注入](#32)
@@ -69,50 +69,26 @@ bitmap优化:
 ### 五 线程优化
 1. 采用线程池，重用其中的线程
 ## <span id = "2">第一章</span>
-1. android系统架构：Linux内核层、系统运行库层、应用框架层（API）、应用层）
-2. adb指令：
-* adb kill-server  杀死服务
-* adb stsrt-server   开启服务
-* cd 桌面 install xx.apk 快速安装apk
-* adb uninstall 包名 快速卸载
-* adb shell 进到终端 ls 显示所有目录
-* adb push 新文件 /目标文件）
-* adb pull 目标文件（写清楚目录结构） 
-3. 项目运行：android-manifest.xml 文件中，会对activity进行注册。
-4. 不在活动中直接编写界面。在布局中编写界面，然后在活动中引入进来。
-5. res目录：drawable放图片。minmap放应用图标。values放字符串、样式、颜色等。layout放布局文件。
-6. build.gradle：构建工具版本；项目包名；
-7. 日志工具：
-* Log.v（）打印嘴琐碎的意义最小的日志信息
-* Log.d（“当前类名”，“想要打印的具体的内容”）打印调试信息 debug
-* Log.i（）打印重要信息 info
-* Log.w（）打印警告信息 warn
-* Log.e（）打印错误信息 error
-8. 一个简单地案例
-* 画ui
-* 根据ui写业务逻辑。mainactivity内。
-* 加载布局（setContentView）找到控件（findViewById）要转型成本类类型，比如按钮就是Button而不是用View；
-* 为按钮设置点击事件setOnClickListener
-其中参数是一个接口，因此定义一个类实现方法需要的接口类型。
-* 类中定义了点击事件所实现的功能。Toast：提示信息。意图定义拨打电话：设置动作——设置拨打的数据——开启意图
-9.  Toast：消息提示.
-Toast.makeText（this/父类.this（看传入的对象是在哪个类中），“文本内容”，1或0）.show（）
-10. 按钮的四种点击事件
-* 内部类：要覆盖重写抽象方法
-* 匿名内部类：要覆盖重写抽象方法
-* 参数使用this，即this调用的是所在类的对象，本类进行继承onclicklistener接口，重写onclick方法，具体判断是哪个按钮switch（v.getId（））。**适用于多个按钮的情况。**
-* button属性，不要id。声明一个方法 方法名和你要点击的按钮在布局中的属性是一样的 android.oncLick=“selfDestruct” public void selfDestruct(**View v**){    } **适用于小demo**
-11. 常用布局
-* 线性布局：linearout  新建xml文件。id常用命名：例如TextView  写tv_功能
-* 相对布局：RelativeLayout  控件默认左上角  指定属性 layout_below/above/toRightof = 某id  指定在某id的下面或者右边
-* 帧布局 ： FrameLayout 一层一层显示
-* 表格布局：TableLayout  一个tabrow就代表一行
-* 绝对布局 AbsoluteLayout
-12. 单位介绍
-* px：像素，不会随着屏幕大小而改变，不用
-* dp：会根据屏幕分辨率进行改变，都用这个
-* sp：给一个textview文字设置大小
-13. 一个活动对应一个布局。活动与用户界面进行交互。
+#### 一 集合类泄露
+集合中的元素只添加不删除
+
+#### 二 单例造成的内存泄露
+context对象被单例引用持有，当Activity退出时引用还被持有。
+改进：使用Application的context
+
+#### 三 非静态内部类创造静态实例造成内部泄露
+1. 非静态内部类默认持有外部类的实例，而非静态内部类有又创建了一个静态的实例，导致该静态实例会一直持有该Activity的引用
+2. 改进：将该内部类设为静态内部类或者将内部类封装为一个单例，如果需要使用Context可以使用Application的Context。在启动Activity和展示Dialog的时候不能使用Application的context，其他都可以
+
+#### 四 匿名内部类
+1. 继承实现Activity/Fragment/View的类中使用了匿名类，这个匿名类的实现对象会持有外部类的引用，如果将匿名类的对象引用传入一个异步线程，这个线程和Activity生命周期不一致的时候，就会造成泄漏
+
+#### 五 Handler造成的泄露
+1.  Handler 发送的 Message 尚未被处理，则该 Message 及发送它的 Handler 对象将被线程 MessageQueue 一直持有。当Activity被finish掉的时候，延迟执行任务的 Message 还会继续存在于主线程中，它持有该 Activity 的 Handler 引用（Handler是非静态内部类，持有外部类的引用），所以此时 finish() 掉的 Activity 就不会被回收了从而造成内存泄漏
+2.  改进：将 Handler 声明为静态的；通过弱引用的方式引入 Activity，避免直接将 Activity 作为 context 传进去
+
+#### 总结
+使用静态内部类和弱引用
 ## <span id = "3">UI基础</span>
 1. Activity：可视化界面
 2. setContentView：设置内容视图，传入的参数就是要加载的布局。
@@ -3349,66 +3325,16 @@ instance作为静态对象生命周期比普通的对象包括Activity都要长�
 * 减少了Activity的职责，简化了Activity中的代码，将复杂的逻辑代码提取到了Presenter中进行处理，模块职责划分明显，层次清晰。与之对应的好处就是，耦合度更低，更方便的进行测试
 * Presenter中同时持有View层的Interface的引用以及Model层的引用，View层持有Presenter层引用
 * 当View层某个界面需要展示某些数据的时候，首先会调用Presenter层的引用，然后Presenter层会调用Model层请求数据，当Model层数据加载成功之后会调用Presenter层的回调方法通知Presenter层数据加载情况，最后Presenter层再调用View层的接口将加载后的数据展示给用户。
-###  <span id = "29">GreenDao</span>
-1. ORM框架——在关系型数据库和对象之间做一个映射，就不需要操作sql语句。
-2. GreenDao
-   * 属于ORM框架
-   * 为关系型数据库提供面向对象的接口
-   * 简化数据库操作
-   * 性能最高
-   * 强大API，涵盖关系和链接
-   * 内存消耗100kb大小
-3. 概念以及步骤
-   * 一个实体类对应一个表——创建实体类
-   * 一个Dao对应一个数据访问对象（某表的操作）
-   * DaoMaster——数据库连接对象
-   * DaoSession——由连接生成的会话——创建Dao、DaoMaster、DaoSession
-4. 使用
-   * 创建数据库会话
-   ```java
-   // 引入注解，写出属性后点Build——Make Project。
-    @Entity
-    public class GoodsModel implements Parcelable {
-        @Id(autoincrement = true)
-        private Long id;
-        @Index(unique = true)
-        private Integer goodsId;
-        private String name;
-        private String icon;
-        private String info;
-        private String type;
-   ```
-   ```java
-        public class MyApplication extends Application {
+###  <span id = "29"><include merge>和viewStub</span>
+#### 一 include
+1. 解决重复定义布局的问题
 
-        public static DaoSession mSession;
+#### 二 merge
+减少层级，与其他view防止平级
 
-        @Override
-        public void onCreate() {
-            super.onCreate();
-            initDb();
-        }
-
-        //连接数据库并创建会话
-        public void initDb () {
-            //1. 获取需要连接的数据库
-    //        获取SQLiteOpenHelper对象devOpenHelper
-            DaoMaster.DevOpenHelper devOpenHelper = new DaoMaster.DevOpenHelper(this, "imooc.db");
-    //        获取SQLiteDatabase
-            SQLiteDatabase db = devOpenHelper.getWritableDatabase();
-            // 2. 创建数据库链接
-    //        加密数据库
-    //        Database db = devOpenHelper.getEncryptedWritableDb("123");
-    //        创建DaoMaster实例
-    //        DaoMaster保存数据库对象（SQLiteDatabase）并管理特定模式的Dao类（而不是对象）。
-    //        它具有静态方法来创建表或将它们删除。
-    //        其内部类OpenHelper和DevOpenHelper是在SQLite数据库中创建模式的SQLiteOpenHelper实现。
-            DaoMaster daoMaster = new DaoMaster(db);
-            // 3. 创建数据库会话
-    //        管理特定模式的所有可用Dao对象
-            mSession = daoMaster.newSession();
-        }
-   ```
+#### 三 ViewStub
+1. 很少使用但是布局复杂的view在需要的时候再显示出来。
+2. 加载viewStub：使用inflate()方法；使用setVisibility(View.VISIBLE)
 ###  <span id = "30">极光推送</span>
 1. 推送：使应用程序即时收到由服务器端发起的通知，客户端接收并进行展示
 2. 实现推送的方式
