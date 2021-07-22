@@ -33,7 +33,7 @@
 * #### [ButterKnife实现View注入](#32)
 ### * [高级应用](#33)
 * #### [Service](#34)
-* #### [ALDL实现远程服务的通信](#35)
+* #### [Binder机制和AIDL使用](#35)
 * #### [ContentProvider](#36)
 * #### [Bitmap压缩策略](#37)
 * #### [HandlerThread](#38)
@@ -4059,8 +4059,30 @@ public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
 3. 点击notification的跳转不能使用PendingIntent的原因。会在程序退出后，notification仍然存在，点击后再back会回退到home界面而不是应用程序的界面，因此增加使用taskStackBuilder来进行跳转。
 4. 用TaskStackBuilder.create(this)创建一个stackBuilder实例，然后stackBuilder.addParentStack(NotificationShow.class);含义为：为跳转后的activity添加一个父activity，在activity中的manifest中添加parentActivityName。也就是说在NotificationShow这个界面点击回退时，会跳转到MainActivity这个界面，而不是直接回到了home菜单。
 5. 通过 stopForeground()方法可以取消通知，即将前台服务降为后台服务。此时服务依然没有停止。通过stopService()可以把前台服务停止。
-###  <span id = "35">ALDL实现远程服务的通信</span>
-1. 安卓接口定义语言：进程间的通信接口
+###  <span id = "35">Binder机制和AIDL使用</span>
+### Binder原理
+#### 1. 概述
+用于进程间通信。Binder数据拷贝只需要一次，而管道、消息队列、Socket都需要2次，共享内存方式一次内存拷贝都不需要，但实现方式又比较复杂。并且Binder机制从协议本身就支持对通信双方做身份校检，从而大大提升了安全性
+#### 2. Binder
+注册服务(addService)： 在Android开机启动过程中，Android会初始化系统的各种Service，并将这些Service向ServiceManager注册（即让ServiceManager管理）。这一步是系统自动完成的。
+
+获取服务(getService)： 客户端想要得到具体的Service直接向ServiceManager要即可。客户端首先向ServiceManager查询得到具体的Service引用，通常是Service引用的代理对象，对数据进行一些处理操作。
+
+使用服务： 通过这个引用向具体的服务端发送请求，服务端执行完成后就返回。
+
+### AIDL使用
+使用服务:
+1. binder对象的获取
+ * Binder对象在服务端和客户端是共享的，是同一个Binder对象。客户端通过binder对象获取实现了interface接口的对象来调用远程服务，然后通过binder来实现参数传递
+ * 服务端获取binder对象并保存interface接口对象：binder具有跨进程传输能力是因为实现了IBinder接口，系统会为每个实现了该接口的对象提供跨进程传输。
+ * 客户端获取binder对象并获取interface接口对象：通过bindService获得binder对象，再通过binder对象获得interface对象（ServiceConnection ）
+2. 调用服务端方法
+   * 调用服务端方法时应开启子线程防止UI线程堵塞导致ANR
+#### 1. 简介
+一种接口定义语言，用于生成可以在安卓设备上两个进程之间进程间通信的代码。如果在一个进程中调用另一个进程中对象的操作，可以使用AIDL生成可序列化的参数来完成进程间通信
+
+#### 2. 使用
+1. 服务端首先要创建一个Service来监听客户端的连接请求，
 ###  <span id = "36">ContentProvider</span>
 ### 一 作用
 1. 四大组件之一——为存储和获取数据提供统一的接口。也就是将自身通过接口将数据提供给外部。
