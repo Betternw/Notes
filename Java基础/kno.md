@@ -172,6 +172,24 @@ x = (short)(x + 4.6);  x的结果是7
 * Field ：可以使用 get() 和 set() 方法读取和修改 Field 对象关联的字段；
 * Method ：可以使用 invoke() 方法调用与 Method 对象关联的方法；
 * Constructor ：可以用 Constructor 的 newInstance() 创建新的对象。
+3. 反射可以在运行时判断任意一个对象所属的类、构造任意一个类的对象、判断一个类具有的成员变量和方法、运行时调用任意一个对象的方法、生成动态代理
+4. 通过反射生成并操作对象
+```java
+    // 生成新的对象：用newInstance()方法
+    Object obj = class1.newInstance();
+    //首先需要获得与该方法对应的Method对象
+    Method method = class1.getDeclaredMethod("setAge", int.class);
+    //调用指定的函数并传递参数
+    method.invoke(obj, 28);
+```
+5. 代理模式
+ * 客户端不直接操控原对象，而是通过代理对象间接的操控原对象
+ * 静态代理实现思路
+   * 代理对象和原对象实现一个共同的接口，并具体实现接口逻辑
+   * 代理类的构造函数中实例化一个原对象，并调用原对象的行为接口
+   * 客户端通过调用代理类来实现调用目标对象的行为接口
+ * 动态代理实现思路（运行时动态生成代理类）
+   * Proxy类和InvocationHandler类
 
 ## 八 异常
 1. Throwable 可以用来表示任何可以作为异常抛出的类，分为两种： Error 和 Exception。其中 Error 用来表示 JVM 无法处理的错误
