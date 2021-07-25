@@ -385,7 +385,7 @@ startActivity(intent);
 #### 二. 启动模式：
 ##### 1. 标准模式(standard)
 1. 默认是这个，按照顺序，每启动一次Activity就会创建一个新的实例并置于栈顶。
-2. 谁启动了新的Activity，就会运行在启动该Activity的栈中。例如：Activity A启动了Activity B，则就会在A所在的栈顶压入一个新的Activity。（5.0后会放入新的栈中，因为会属于不同的程序）
+2. 谁启动了新的Activity，就会运行在启动该Activity的栈中。例如：Activity A启动了Activity B，则就会在A所在的栈顶压入一个新的Activity。（5.0后如果是跨进程启动会放入新的栈中，因为属于不同的程序）
 3. 特殊情况，如果在Service或Application中启动一个Activity，其并没有所谓的任务栈，可以使用标记位Flag来解决。解决办法：为待启动的Activity指定FLAG_ACTIVITY_NEW_TASK标记位，创建一个新栈。
 4. 应用场景： 绝大多数Activity。如果以这种方式启动的Activity被跨进程调用，在5.0之前新启动的Activity实例会放入发送Intent的Task的栈的顶部，但是属于不同的程序，在5.0之后，上述情景会创建一个新的Task，新启动的Activity就会放入刚创建的Task中。
 ##### 2. 栈顶复用模式（singleTop）
