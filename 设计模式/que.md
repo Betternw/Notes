@@ -29,6 +29,44 @@
     * 静态代理使用场景：四大组件同AIDL与AMS进行跨进程通信
     * 动态代理使用场景：Retrofit使用了动态代理极大地提升了扩展性和可维护性。
 7. 单例模式
+恶汉：直接实例化好,浪费资源，线程不安全
+```java
+public class Singleton1 {
+    private static final Singleton1 INSTANCE = new Singleton1();
+    private Singleton1() {}
+    public static Singleton1 getInstance() {
+        return INSTANCE;
+    }
+}
+```
+
+懒汉式：线程不安全
+```java
+public class Singleton3 {
+    private static Singleton3 INSTANCE = null;
+    private Singleton3() {}
+    public static Singleton3 getInstance() {
+        if (INSTANCE == null) {
+            INSTANCE = new Singleton3();
+        }        
+        return INSTANCE;
+    }
+}
+```
+懒汉式：线程安全，synchronized修饰方法，效率低。
+```java
+public class Singleton4 {
+    private static Singleton4 INSTANCE = null;
+    private Singleton4() {}
+    public static synchronized Singleton4 getInstance() {
+        if (INSTANCE == null) {
+            INSTANCE = new Singleton4();
+        }        
+        return INSTANCE;
+    }
+}
+```
+双重校验：
 ```java
 public class Singleton{
   private volatile static Singleton instance;
@@ -48,3 +86,4 @@ public class Singleton{
 
 }
 ```
+new对象：分配内存给这个对象、初始化这个对象、把INSTANCE变量指向初始化的对象，不是原子操作。使用volatile关键字可以解决重排序的问题
