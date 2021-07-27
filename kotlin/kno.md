@@ -83,7 +83,7 @@
 #### 4. 协程的四个基本概念
 1. suspend function。即挂起函数，delay 函数就是协程库提供的一个用于实现非阻塞式延时的挂起函数
 2. CoroutineScope。即协程作用域，GlobalScope 是 CoroutineScope 的一个实现类，用于指定协程的作用范围，可用于管理多个协程的生命周期，所有协程都需要通过 CoroutineScope 来启动
-3. CoroutineContext。即协程上下文，包含多种类型的配置参数。Dispatchers.IO 就是 CoroutineContext 这个抽象概念的一种实现，用于指定协程的运行载体，即用于指定协程要运行在哪类线程上
+3. CoroutineContext。即协程上下文，包含多种类型的配置参数。Dispatchers.IO 就是 CoroutineContext 这个抽象概念的一种实现，用于指定协程的运行载体，即用于指定协程要运行在哪类线程上。Main：UI线程；Default：用于执行Cpu密集型任务；IO：用于执行会阻塞线程的任务，比如网络请求，文件读写等。
 4. CoroutineBuilder。即协程构建器，协程在 CoroutineScope 的上下文中通过 launch、async 等协程构建器来进行声明并启动。launch、async 等均被声明 CoroutineScope 的扩展方法
 
 #### 5. suspend function
