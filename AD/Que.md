@@ -268,7 +268,7 @@ mHandlerThread .start();
   * 因为在Activity中开启子线程，当Activity被销毁了，子线程是无法控制的，但是如果在Service中开启子线程，就无需担心这些，完全不用担心对子线程的控制，因为子线程都在Service中。
 58. handler——发送处理消息
    * 子线程的操作通过handler传递给主线程；
-   * Handler在子线程中怎么发送消息，
+   * Handler在子线程中怎么发送消息，子线程怎么创建Handler
      * 拿到主线程的Looper或者通过手动调用Looper.prepare和Looper.loop，
      * HandlerThread：它不需要我们去拿主线程的Looper，也不用手动调用Looper.prepare和Looper.loop，它已经封装了Looper，
    * 使用方法：post（runnable）、sendmessage（message）；
@@ -292,8 +292,9 @@ mHandlerThread .start();
      * Handler 引起的内存泄露原因以及最佳解决方案——当Handler消息队列 还有未处理的消息 / 正在处理消息时，存在引用关系： “未被处理 / 正处理的消息Message持有Handler实例的引用，handler又持有外部类的引用。——将 Handler 定义成静态的内部类，在内部持有 Activity 的弱引用，
    * Looper循环为什么不会导致应用卡死
      * 因为死循环的作用是保证不断循环，主线程可以一直处于运行状态。通过loop循环遍历MessageQueue,然后通过H handler类的handleMessage方法去处理activity相关的start、pause、stop、destroy等各类事件。真正卡死主线程操作的是在回调方法onCreate、onStart、onResume等操作时间过长，会导致掉帧甚至ANR，Looper.loop()本身不会导致应用卡死。
-   * 主线程的死循环一直运行是不是特别消耗 CPU 资源呢？
-     * 在messagequeue中没有消息时，主线程会释放CPU资源进入休眠状态，当有下个消息到达时候，通过往pipe管道写端口写入数据来唤醒休眠的线程。这里采用IO多路复用，同时监控多个描述符，当某个描述符就绪(读或写就绪)，则立刻通知相应程序进行读或写操作，所以说，主线程大多数时候都是处于休眠状态，并不会消耗大量CPU资源。
+   * 主线程的死循环一直运行是不是特别消耗 CPU 资源呢？Handler底层是如何唤醒的？
+       * 在messagequeue中没有消息时，主线程会释放CPU资源进入休眠状态，当有下个消息到达时候，通过往pipe管道写端口写入数据来唤醒休眠的线程。这里采用IO多路复用，同时监控多个描述符，当某个描述符就绪(读或写就绪)，则立刻通知相应程序进行读或写操作，所以说，主线程大多数时候都是处于休眠状态，并不会消耗大量CPU资源。
+   * ThreadLocal 是线程内部的数据存储类，ThreadLocalMap 是 ThreadLocal 的静态内部类，里面保存了一个 private Entry[] table 数组，这个数组就是用来保存 ThreadLocal 中的值。通过这种方式，就能让我们在多个线程中互不干扰地存储和修改数据。它是一个线程内部的数据存储类。
 59. 自定义View的绘制
    * View树的绘制流程：measure（是否需要计算视图大小）——layout（是否需要视图位置）——draw（是否需要重绘）
    * measure：树的递归。从上到下有序遍历。根据父容器对子容器的测量规格的参数，获取子容器的长宽高，并返回父容器，然后进行统一的测量。
@@ -359,10 +360,17 @@ mHandlerThread .start();
 69. binder和bundle
    * binder
      * 跨进程通信，客户端和服务端之间通信
-     * Android使用Linux内核，通信方式有：socket、binder、管道
-     * 性能更好，binder比socket更高效。Binder数据拷贝只需要一次，而管道、消息队列、Socket都需要2次，共享内存方式一次内存拷贝都不需要，但实现方式又比较复杂。
-     * 安全性更高，socket是ip地址手动填写，会有安全性问题。binder要进行通信双方信息校验，所以更安全
+     * 使用binder的原因：
+       * Android使用Linux内核，通信方式有：socket、binder、管道
+       * 性能更好，binder比socket更高效。Binder数据拷贝只需要一次，而管道、消息队列、Socket都需要2次，共享内存方式一次内存拷贝都不需要，但实现方式又比较复杂。
+       * Binder是基于CS也就是客户端服务端架构的，客户端有什么需求，直接发送给服务端去完成，相对独立。而共享内存实现复杂，没有客户服务端之别，需要充分考虑到访问临界资源的并发同步问题，否则可能会出现死锁等问题
+       * 安全性更高，socket是ip地址手动填写，会有安全性问题。binder要进行通信双方信息校验，所以更安全
+     * 为什么需要binder驱动？放在用户空间行不行
+       * binder驱动：binder机制分为四部分，binder驱动、客户端、服务端和serviceManager。对Binder机制来说，binder驱动是IPC通信的路由器，负责不同进程间的数据交互，
+       * 为什么需要运行在内核空间：两个进程之间通信需要内核空间做支持（用户空间访问内核空间通过系统调用），因此binder需要运行在内核空间。
+       * binder_mmap——binder内核空间和用户空间的数据传递：内存映射。将用户空间的一块内存区域映射到内核空间，映射关系建立后，用户对这块内存区域的修改可以直接反应到内核空间；反之内核空间对这段区域的修改也能直接反应到用户空间。因此binder操作数据只需要一次。
      * 通信模型步骤
+     * binder_ioctl()——匿名共享内存：共享内存映射的是一个硬盘中真实存在的文件，而匿名共享内存映射的是一个虚拟文件。使用匿名共享内存的好处：不用担心共享内存映射的文件被其他进程打开导致数据异常、即使通信很频繁也不会在硬盘中生成文件。binder驱动的读写操作都是通过这个匿名共享内存实现的。
        * 建立serviceManager，相当于通信录，
        * server进程进行注册，
        * 通信时，查询serviceManeger，将信息告诉client，client通过binder与server进行通信
@@ -498,5 +506,59 @@ mHandlerThread .start();
   * 单例造成的内存泄露，比如一些需要传入参数是context，如果是Activity的context，由于该 Context 的引用被单例对象所持有，其生命周期等于整个应用程序的生命周期，所以当前 Activity 退出时它的内存并不会被回收，这就造成泄漏了。
   * 非静态内部类创建静态实例造成的内存泄漏
   * Handler 造成的内存泄漏——使用静态内部类 + WeakReference
-
+77. APK打包流程
+  * Java编译器对工程本身的java代码进行编译，产出为.class文件。
+  * class文件和依赖的三方库文件通过dex工具生成Delvik虚拟机可执行的.dex文件，包含了所有的class信息，包括项目自身的class和依赖的class。产出为.dex文件。将所有其他内容转换成已编译资源。
+  * apkbuilder工具将.dex文件和编译后的资源文件生成未经签名对齐的apk文件。这里编译后的资源文件包括两部分，一是由aapt编译产生的编译后的资源文件，二是依赖的三方库里的资源文件。产出为未经签名的.apk文件。
+  * 分别由Jarsigner和zipalign对apk文件进行签名和对齐，生成最终的apk文件。
+  * 总结：编译 ——> DEX ——> 打包 ——> 签名和对齐
+78. LinearLayout和RelativeLayout性能对比
+  * RelativeLayout会让子View调用2次onMeasure，因为其中的view会存在相互依赖关系，会进行横向和纵向的两次排序测量。LinearLayout 在有weight时，也会调用子View2次onMeasure。第一册测量获取所有子view的高度，第二次将剩余高度根据weight加到weight>0的子View上。
+  * RelativeLayout的子View如果高度和RelativeLayout不同，则会引发效率问题，当子View很复杂时，这个问题会更加严重。RelativeLayout的子View如果高度和RelativeLayout不同，会导致RelativeLayout在onMeasure()方法中做横向测量时，纵向的测量结果尚未完成，只好暂时使用自己的高度传入子View系统。而父View给子View传入的值也没有变化就不会做无谓的测量的优化会失效。如果可以，尽量使用padding代替margin
+  * DecorView的层级深度已知且固定的，上面一个标题栏，下面一个内容栏，采用RelativeLayout并不会降低层级深度，因此这种情况下使用LinearLayout效率更高。
+  * 开发者默认新建RelativeLayout是希望开发者能采用尽量少的View层级，很多效果是需要多层LinearLayout的嵌套，这必然不如一层的RelativeLayout性能更好。
+79. Service和Activity之间通信的几种方式
+  * 通过Binder对象
+  * 通过BroadCast方式
+80. onCreate()、onResume() 中可以获取View的宽高吗
+  * 不能。绘制最开始的调用方法是在onResume方法之后的，也就是说view的绘制流程是从onresume后开始的。
+81. View.post（）为什么可以获取
+    * 原本在onCreate中直接进行绘制不行，但是调用view.Post后，会将方法添加到队列尾部，保证了在layout结束以后才执行
+82. 事件分发
+  * 只有中间的ViewGroup有拦截方法，如果不拦截，就会交给view进行处理。
+  * 子View可调用requestDisallowInterceptTouchEvent方法，来设置disallowIntercept=true，从而阻止父ViewGroup的onInterceptTouchEvent拦截操作
+  * 如果View没有消费ACTION_DOWN事件，则之后的ACTION_MOVE等事件都不会再接收
+  * onTouchListener onTouchEvent onClick 的执行顺序是什么样的？
+    * 如果设置了onTouchListenerVBing且是enable，就执行ontouch——如果onTouch返回true，那么不执行onTouchEvent，不会执行OnClick()
+——onTouch()返回false（该事件没被onTouch()消费掉） = 执行onTouchEvent() = 执行OnClick()
+  * onClick() 的回调是在 onTouchEvent() 方法中调用，onTouchEvent() 不执行则 onClick() 不执行。
+83. 虚拟机
+      * JVM和Dalvik区别
+        * Jvm基于栈，Dalvik基于寄存器
+        * Jvm运行java字节码，Dalvik通过dx工具将.class文件转换成dex文件
+      * Dalvik和ART区别
+        * ART在第一次安装的时候就将字节码转换为机器码，而Dalvik要通过即时编译器将字节码转换为机器码
+        * Art采用并发标记清除方案，启动gc后只有一次暂停。Dalvik采用的标记清除算法，在遍历和标记阶段会造成两次暂停。
+84. 关于屏幕刷新的问题
+    * 丢帧(掉帧) ，是说 这一帧延迟显示 还是丢弃不再显示 ？
+        * 延迟显示，因为缓存交换的时机只能等下一个VSync了。
+    * 布局层级较多/主线程耗时 是如何造成 丢帧的呢？
+       * 布局层级较多/主线程耗时 会影响CPU/GPU的执行时间，大于16.6ms时只能等下一个VSync了
+    *  16.6ms刷新一次 是啥意思？是每16.6ms都走一次 measure/layout/draw ？
+       *  屏幕的固定刷新频率是60Hz，即16.6ms。不是每16.6ms都走一次 measure/layout/draw，而是有绘制任务才会走，并且绘制时间间隔是取决于布局复杂度及主线程耗时
+    *  measure/layout/draw 走完，界面就立刻刷新了吗? 
+       *  不是。measure/layout/draw 走完后 会在VSync到来时进行缓存交换和刷新
+    *  如果界面没动静止了，还会刷新吗？
+       *  屏幕会固定没16.6ms刷新，但CPU/GPU不走绘制流程。
+    *  VSYNC，这个具体指啥？在屏幕刷新中如何工作的？ 
+       * 当扫描完一个屏幕后，设备需要重新回到第一行以进入下一次的循环，此时会出现的vertical sync pulse（垂直同步脉冲）来保证双缓冲在最佳时间点才进行交换。 CPU/GPU的绘制是在VSYNC到来时开始。 
+       * 就是安卓系统每隔16ms会发出这个信号，然后触发对U进行渲染。
+85. 每个应用程序分配的内存大小是多少
+  * android程序内存一般限制在16M，也有的是24M。近几年手机发展较快，一般都会分配两百兆左右，和具体机型有关。
+86. intent传递数据大小
+  * 传 512K 以下的数据的数据可以正常传递。
+  * 传 512K~1024K 的数据会出错，闪退。
+  * 传 1024K 以上的数据会报错：TransactionTooLargeException
+  * 考虑到 Intent 还包括要启动的 Activity 等信息，实际可以传的数据略小于 512K
+  * binder大概是1MB大小
 
