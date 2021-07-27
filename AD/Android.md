@@ -43,6 +43,7 @@
 * #### [View测量布局及绘制原理](#42)
 * #### [Android虚拟机及编译过程](#43)
 * #### [进程间通信方式](#44)
+* #### [Aop](#45)
 ## <span id = "1"> 性能优化总结</span>
 ### 一 布局优化
 1. 删除布局中无用的控件和层次，选择性能比较低的viewFroup
@@ -410,7 +411,7 @@ startActivity(intent);
 1. 应用场景：大多数App的主页。当我们第一次进入主界面之后，主界面位于栈底，以后不管我们打开了多少个Activity，只要我们再次回到主界面，都应该将主界面Activity上所有的Activity移除，来让主界面Activity处于栈顶，而不是往栈顶新加一个主界面Activity的实例，通过这种方式能够保证退出应用时所有的Activity都能报销毁。在跨应用Intent传递时，如果系统中不存在singleTask Activity的实例，那么将创建一个新的Task，然后创建SingleTask Activity的实例，将其放入新的Task中。
 ##### 4. 单例模式（singleInstance）
 1. 打开该Activity时，会直接创建一个新的任务栈，并创建该Activity实例放入新栈中。一旦该模式的Activity实例已经存在于某个栈中，任何应用再激活该Activity时都会重用该栈中的实例。
-2. 应用场景： 呼叫来电界面。这种模式的使用情况比较罕见，在Launcher中可能使用。或者你确定你需要使Activity只有一个实例。建议谨慎使用。
+2. 应用场景： 呼叫来电界面。这种模式的使用情况比较罕见，在上午5点59分时，你在微信和朋友聊天；在6点时，闹铃响了，并且弹出了一个对话框形式的 Activity(名为 AlarmAlertActivity) 提示你到6点了(这个 Activity 就是以 SingleInstance 加载模式打开的)，你按返回键，回到的是微信的聊天界面，这是因为 AlarmAlertActivity 所在的 Task 的栈只有他一个元素， 因此退出之后这个 Task 的栈空了。如果是以 SingleTask 打开 AlarmAlertActivity，那么当闹铃响了的时候，按返回键应该进入闹铃设置界面。
 ##### 5. 特殊情况——前台栈和后台栈的交互
 假如目前有两个任务栈。前台任务栈为AB，后台任务栈为CD，这里假设CD的启动模式均为singleTask,现在请求启动D，那么这个后台的任务栈都会被切换到前台，这个时候整个后退列表就变成了ABCD。当用户按back返回时，列表中的activity会一一出栈——D,C,B,A
 
@@ -4783,3 +4784,13 @@ onDraw()方法：无论单一View，或者ViewGroup都需要实现该方法，�
    * Http用于应用层，无状态协议
    * Socket用于传输层：可以自己定义协议，灵活性更高，实现Client和Server的通信。
 6. https：更加安全
+
+
+### <span id = "45">Aop"</span>
+Aop指切面编程
+1. 静态织入：发生在加载到虚拟机之前。APT
+2. 动态织入：运行阶段。动态代理
+3. APT:注解处理器，在编译时候=扫描和处理注解。常用于生成一些模板代码或运行时依赖的类文件。常见的比如：ButterKnife。ButterKnife.bind(this)可以实现控件的赋值。
+4. 动态代理：JDK本身就提供一个Proxy类用于实现动态代理。Retrofit框架中就用到了动态代理。
+   * 动态代理是生成一个代理类，其中的逻辑通过InvocationHandler，所有的方法都由InvocationHandler接管处理。
+   * retrofit中，retrofit.create 方法就是创建一个代理，让代理去进行真正的网络请求。代理类会进行请求参数的构建，一大堆的请求配置。这些繁琐的操作都让代理类去完成了
