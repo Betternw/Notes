@@ -82,7 +82,7 @@
 7. Bunder传递对象为什么需要序列化？Serialzable和Parcelable的区别？
 * 因为bundle传递数据时只支持基本数据类型，所以在传递对象时需要序列化转换成可存储或可传输的本质状态（字节流）
 * Serializable（Java自带）：序列化，表示将一个对象转换成存储或可传输的状态。序列化后的对象可以在网络上进传输，也可以存储到本地。在硬盘上。
-* Parcelable（android专用）：使用Parcelable也可以实现相同的效果，不过不同于将对象进行序列化，Parcelable方式的实现原理是将一个完整的对象进行分解，而分解后的每一部分都是Intent所支持的数据类型，这也就实现传递对象的功能了。在内存中
+* Parcelable（android专用）：使用Parcelable也可以实现相同的效果，不过不同于将对象进行序列化，Parcelable方式的实现原理是将一个完整的对象进行分解，而分解后的每一部分都是Intent所支持的数据类型，这也就实现传递对象的功能了。将序列化后的字节流写入到一个共性内存中，其他对象可以从这块共享内存中读出字节流，并反序列化成对象。因此效率比较高，适合在对象间或者进程间传递信息。
 8. Context相关
 * Activity和Service以及Application的Context是不一样的,Activity继承自ContextThemeWraper.其他的继承自ContextWrapper。
 * 每一个Activity和Service以及Application的Context是一个新的ContextImpl对象。
@@ -517,7 +517,14 @@ mHandlerThread .start();
   * apkbuilder工具将.dex文件和编译后的资源文件生成未经签名对齐的apk文件。这里编译后的资源文件包括两部分，一是由aapt编译产生的编译后的资源文件，二是依赖的三方库里的资源文件。产出为未经签名的.apk文件。
   * 分别由Jarsigner和zipalign对apk文件进行签名和对齐，生成最终的apk文件。
   * 总结：编译 ——> DEX ——> 打包 ——> 签名和对齐
-78. LinearLayout和RelativeLayout性能对比
+78. Apk安装流程
+  * 复制APK到/data/app目录下，解压并扫描安装包。
+  * 资源管理器解析APK里的资源文件。
+  * 解析AndroidManifest文件，并在/data/data/目录下创建对应的应用数据目录。
+  * 然后对dex文件进行优化，并保存在dalvik-cache目录下
+  * 将AndroidManifest文件解析出的四大组件信息注册到PackageManagerService中。
+  * 安装完成后，发送广播。
+79. LinearLayout和RelativeLayout性能对比
   * RelativeLayout会让子View调用2次onMeasure，因为其中的view会存在相互依赖关系，会进行横向和纵向的两次排序测量。LinearLayout 在有weight时，也会调用子View2次onMeasure。第一册测量获取所有子view的高度，第二次将剩余高度根据weight加到weight>0的子View上。
   * RelativeLayout的子View如果高度和RelativeLayout不同，则会引发效率问题，当子View很复杂时，这个问题会更加严重。RelativeLayout的子View如果高度和RelativeLayout不同，会导致RelativeLayout在onMeasure()方法中做横向测量时，纵向的测量结果尚未完成，只好暂时使用自己的高度传入子View系统。而父View给子View传入的值也没有变化就不会做无谓的测量的优化会失效。如果可以，尽量使用padding代替margin
   * DecorView的层级深度已知且固定的，上面一个标题栏，下面一个内容栏，采用RelativeLayout并不会降低层级深度，因此这种情况下使用LinearLayout效率更高。
@@ -565,5 +572,26 @@ mHandlerThread .start();
   * 传 512K~1024K 的数据会出错，闪退。
   * 传 1024K 以上的数据会报错：TransactionTooLargeException
   * 考虑到 Intent 还包括要启动的 Activity 等信息，实际可以传的数据略小于 512K
+    * 解决：
+      * 进程内：文件缓存、磁盘缓存
+      * 进程间：通过contentProvider进行数据共享
   * binder大概是1MB大小
+87. 安卓系统架构
+  * 从上到下依次为：Android应用框架层、java系统框架层、c++系统框架层、linux内核层
+88. Activity和service通信
+  * 通过bindService方式，先在Activity里实现一个ServiceConnection接口，并将该接口传递给bindService()方法，在ServiceConnection接口的onServiceConnected()方法里执行相关操作。
+89. 为什么bindService可以和Activity生命周期联动
+  * startService：由 ActivityThread 来创建 Service 对象，回调相关的生命周期方法等。
+  * bindService：bindService 方法执行时，LoadedApk 会记录 ServiceConnection 信息；Activity 执行 finish 方法时，会通过 LoadedApk 检查 Activity 是否存在未注销/解绑的 BroadcastReceiver 和 ServiceConnection，如果有，那么会通知 AMS 注销/解绑对应的 BroadcastReceiver 和 Service，并打印异常信息，告诉用户应该主动执行注销/解绑的操作
+90. SharePreference
+  * 轻量级存储，创建的时候会把整个文件加载进内存
+
+91. 安卓进程保活
+  * 提升进程的优先级，降低进程被杀死的概率
+    * 监控手机锁屏事件，在屏幕锁屏时启动一个像素的Activity，在用户解锁时将Activity销毁掉，前台Activity可以将进程变成前台进程，优先级升级到最高。
+  * 拉活已经被杀死的进程
+    * 利用广播拉活Activity
+
+92. 
+
 
