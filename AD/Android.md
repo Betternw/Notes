@@ -91,6 +91,9 @@ context对象被单例引用持有，当Activity退出时引用还被持有。
 1. java.lang.OutOfMemoryError: Java heap space ------>java堆内存溢出，一般由于内存泄露或者堆的大小设置不当引起。对于内存泄露，需要通过内存监控软件查找程序中的泄露代码，而堆大小可以通过虚拟机参数-Xms,-Xmx等修改。
 2. java.lang.OutOfMemoryError: PermGen space ------>java永久代溢出，即方法区溢出了，一般出现于大量Class或者jsp页面，或者采用cglib等反射机制的情况，因为上述情况会产生大量的Class信息存储于方法区。此种情况可以通过更改方法区的大小来解决，使用类似-XX:PermSize=64m -XX:MaxPermSize=256m的形式修改。另外，过多的常量尤其是字符串也会导致方法区溢出。
 3. java.lang.StackOverflowError ------> 不会抛OOM error，但也是比较常见的Java内存溢出。JAVA虚拟机栈溢出，一般是由于程序中存在死循环或者深度递归调用造成的，栈大小设置太小也会出现此种溢出。可以通过虚拟机参数-Xss来设置栈的大小。
+
+#### 内存回收
+不进行内存回收会造成内存不足：会频繁GC、导致应用缓慢卡顿；会一直杀死进程，影响用户体验。
 #### 五 Handler造成的泄露
 1.  Handler 发送的 Message 尚未被处理，则该 Message 及发送它的 Handler 对象将被线程 MessageQueue 一直持有。当Activity被finish掉的时候，延迟执行任务的 Message 还会继续存在于主线程中，它持有该 Activity 的 Handler 引用（Handler是非静态内部类，持有外部类的引用），所以此时 finish() 掉的 Activity 就不会被回收了从而造成内存泄漏
 2.  改进：将 Handler 声明为静态的；通过弱引用的方式引入 Activity，避免直接将 Activity 作为 context 传进去
