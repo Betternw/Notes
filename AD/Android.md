@@ -70,6 +70,12 @@ bitmap优化:
 ### 五 线程优化
 1. 采用线程池，重用其中的线程
 
+### 六
+1. 节制的使用Service，当启动一个Service时，系统总是倾向于保留这个Service依赖的进程，这样会造成系统资源的浪费，可以使用IntentService，执行完成任务后会自动停止。
+2. 当界面不可见时释放内存，可以重写Activity的onTrimMemory()方法，然后监听TRIM_MEMORY_UI_HIDDEN这个级别，这个级别说明用户离开了页面，可以考虑释放内存和资源。
+3. 避免在Bitmap浪费过多的内存，使用压缩过的图片，也可以使用Fresco等库来优化对Bitmap显示的管理。
+4. 使用优化过的数据集合SparseArray代替HashMap，HashMap为每个键值都提供一个对象入口，使用SparseArray可以免去基本对象类型转换为引用数据类想的时间。
+
 ## <span id = "2">内存泄露汇总</span>
 内存泄露是指程序中已动态分配的堆内存由于某种原因程序未释放或无法释放，造成系统内存的浪费。而当可用内存变少时，程序当申请内存时，没有足够的控件供其使用，就会出现OOM内存溢出。
 #### 内存泄露
@@ -1067,6 +1073,8 @@ public class MainActivity extends AppCompatActivity {
 * 如果Activity中包含自己管理的Fragment的引用，可以通过引用直接访问所有的Fragment的public方法
 * 如果Activity中未保存任何Fragment的引用，每个Fragment都有一个唯一的TAG或者ID,可以通过getFragmentManager.findFragmentByTag()或者findFragmentById()获得任何Fragment实例，然后进行操作
 * Fragment中可以通过getActivity()得到当前绑定的Activity的实例，然后进行操作。
+  * 问题：getActivity()空指针：这种情况一般发生在在异步任务里调用getActivity()，而Fragment已经onDetach()，此时就会有空指针，
+  * 解决：是在Fragment里使用一个全局变量mActivity，在onAttach()方法里赋值，这样可能会引起内存泄漏，但是异步任务没有停止的情况下本身就已经可能内存泄漏，相比直接crash，这种方式更好
 
 ### 六 Fragment与Activity通信的优化
 1. 最好不要Fragment之间相互操作，Activity担任的是Fragment间类似总线一样的角色，应当由它决定Fragment如何操作
@@ -3369,445 +3377,8 @@ instance作为静态对象生命周期比普通的对象包括Activity都要长�
       * 添加继承自BroadcastReceiver的类
       * 激活jpush插件
 ###  <span id = "31">WebView浏览器组件</span>
-1. WebView
-   * 一种ui组件
-   * 基于webakkitnei内核（Chromium）
-   * 可以用来展示网页并且可以和网页进行交互
-2. 网页组成： HTML CSS JS
-3. WebView常用方法
-   * 加载网页的四种方式
-      * loadUrl（String url）
-      * loadUrl(String url,Map<String,String> additionalHttpHeaders)
-      * loadData(String data,String mimeType,String encoding)
-      * loadDataWithBaseURL(String baseUrl,String data,String mimeType,String encoding,String historyUrl)
-    * 控制网页的前进和后退
-       * boolean canGoBack()
-       * boolean canGoForward()
-       * boolean canGoBackOrForward(int steps)
-       * void goBack()
-       * void goForward()
-       * void goBackOrForward(int steps)
-       * void clearHistory()
-    * 状态管理（在Activity结束的时候webView也结束，与Activity的生命周期做相同的处理）
-       * onPause()：通知内核暂停所有动作
-       * pauseTimers()
-       * on Resume()：激活为活跃状态
-       * resumeTimers()
-       * destory()：销毁webview
-4. Web常用类
-   * WebSettings：对webView配置和管理，比如控制网页缩放，jsp的代码运行等
-      * 控制js代码运行
-      ```java
-              WebSettings webSettings = mWebView.getSettings();
-              webSettings.setJavaScriptEnabled(true);
-      ```
-      * 控制缩放
-      ```java
-        //是否支持缩放
-        webSettings.setSupportZoom(true);
-        //设置内置缩放控件
-        webSettings.setBuiltInZoomControls(true);
-        //是否隐藏原生的缩放控件
-        webSettings.setDisplayZoomControls(true);
-      ```
-      * 控制对网页的缓存
-      ```java
-        //永远不使用网络只有本地缓存，没有本地缓存则不会加载
-       webSettings.setCacheMode(WebSettings.LOAD_CACHE_ONLY);
-        //只要本地有缓存，无论是否过期，都使用本地缓存，没有缓存才去加载网络
-        webSettings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK);
-        //默认，根据cache-control决定是否从网络获取
-       webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
-        //永不使用缓存，只从网络获取
-        webSettings.setCacheMode(WebSettings.LOAD_NO_CACHE);
-      ```
-   * WebViewClient：处理网页加载时的各种回调通知
-      * 默认使用系统浏览器加载，传入参数就可以在本地app加载
-      * 常用方法
-      ```java
-      @Override
-            //进行资源请求时回调
-            public WebResourceResponse shouldInterceptRequest(WebView view, WebResourceRequest request) {
-                Log.e("WebViewActivity","webview-》shouldInterceptRequest请求了(android5.0之上调用)url：" + request.getUrl().toString());
-                return super.shouldInterceptRequest(view, request);
-            }
-
-            @Override
-            //网页开始加载的时候回调
-            public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                super.onPageStarted(view, url, favicon);
-                Log.e("WebViewActivity","webview-》onPageStarted 网页开始进行加载url：" + url);
-            }
-
-            @Override
-            //加载网页之前回调
-            public void onLoadResource(WebView view, String url) {
-                super.onLoadResource(view, url);
-                Log.e("WebViewActivity","webview-》onLoadResource 网页开始加载资源url：" + url);
-            }
-
-            @Override
-            //网页加载完成时回调
-            public void onPageFinished(WebView view, String url) {
-                super.onPageFinished(view, url);
-                Log.e("WebViewActivity","webview-》onPageFinished 网页已经加载完成url：" + url);
-            }
-      ```    
-   * WebChromeClient：辅助获取网页标题、对话框、进度等
-      * ```java
-            mWebView.setWebChromeClient(new WebChromeClient() {
-                @Override
-                //获取网页加载进度
-                public void onProgressChanged(WebView view, int newProgress) {
-                    super.onProgressChanged(view, newProgress);
-                    Log.e("webViewActivity", "newProgress:" + newProgress);
-                }
-
-                @Override
-                //获取网页标题
-                public void onReceivedTitle(WebView view, String title) {
-                    super.onReceivedTitle(view, title);
-                    Log.e("webViewActivity", "title:" + title);
-                }
-                     @Override
-            //在网页将要打开一个alert警告对话框的时候回调
-            public boolean onJsAlert(WebView view, String url, String message, JsResult result) {
-                boolean res = super.onJsAlert(view, url, message, result);
-                res = true;
-                Log.e("webViewActivity", "onJsAlert - url : " + url + " - message : " + message + "  - res : " + res);
-                Toast.makeText(WebViewActivity.this, message, Toast.LENGTH_SHORT).show();
-                result.confirm();
-                return res;
-            }
-
-            @Override
-            //在网页将要打开一个confirm警告对话框的时候回调
-            public boolean onJsConfirm(WebView view, String url, String message, final JsResult result) {
-                boolean res = super.onJsConfirm(view, url, message, result);
-                res = true;
-                Log.e("webViewActivity", "onJsConfirm - url : " + url + " - message : " + message + "  - res : " + res);
-                AlertDialog.Builder builder = new AlertDialog.Builder(WebViewActivity.this);
-                builder.setMessage(message);
-                builder.setPositiveButton("确定", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        result.confirm();
-                    }
-                });
-
-                builder.setNegativeButton("取消", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        result.cancel();
-                    }
-                });
-                builder.create().show();
-                return res;
-            }
-
-            @Override
-            //在网页将要打开一个prompt警告对话框的时候回调
-            public boolean onJsPrompt(WebView view, String url, String message, String defaultValue, final JsPromptResult result) {
-                boolean res = super.onJsPrompt(view, url, message, defaultValue, result);
-                res = true;
-                Log.e("webViewActivity", "onJsConfirm - url : " + url + " - message : " + message + " - defaultValue : " + defaultValue + "  - res : " + res);
-                AlertDialog.Builder builder = new AlertDialog.Builder(WebViewActivity.this);
-                builder.setMessage(message);
-                builder.setPositiveButton("确定", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        result.confirm("这是点击了确定按钮之后的输入框内容");
-                    }
-                });
-
-                builder.setNegativeButton("取消", new DialogInterface.OnClickListener() {
-                    @Override
-                    public void onClick(DialogInterface dialogInterface, int i) {
-                        result.cancel();
-                    }
-                });
-                builder.create().show();
-                return res;
-            }
-        ```
-5. Android端调用JS代码
-   * loadUrl('javascript:方法名（参数...)'),但是无法获取返回值
-   ```java
-       public void onShowAlertFromloadUrl (View v) {
-        mWebView.loadUrl("javascript:showAlert()");
-      }
-   ```
-   * evaluateJavascript('javascript:方法名（参数...)',ValueCallback<String> resultCallback）
-   ```java
-       public void onSumFromEVJS (View v) {
-        mWebView.evaluateJavascript("javascript:sum(2, 3)", new ValueCallback<String>() {
-            @Override
-            public void onReceiveValue(String s) {
-                Toast.makeText(WebViewActivity.this, "evaluateJavascript - " + s, Toast.LENGTH_SHORT).show();
-            }
-        });
-       }
-   ```
-6. JS调用Android代码
-   * 拦截js请求的回调方法
-   ```java
-    //js协议内容需要设置为Android
-                Uri uri = Uri.parse(url);
-                if ("android".equals(uri.getScheme())) {
-                    String functionName = uri.getAuthority();
-                    if ("print".equals(functionName)) {
-                        String msg = uri.getQueryParameter("msg");
-                        print(msg);
-                        return true;
-                    }
-                }
-   ```
-   * 对象映射
-   ```java
-    mWebView.addJavascriptInterface(new DemoJsObject(), "android");
-   ```
-   ```java
-    public class DemoJsObject {
-
-        @JavascriptInterface
-        public String print (String msg) {
-            Log.e("DemoJsObject", "msg ：" + msg);
-            return "这是android的返回值";
-        }
-    }
-
-   ```
 ###  <span id = "32">ButterKnife实现View注入</span>
 * 对一个成员变量使用@BindView注解，并传入一个View ID， ButterKnife 就能够帮你找到对应的View，并自动的进行转换（将View转换为特定的子类）
-1. 注入View、资源和事件
-```java
-
-    //注入View
-    @BindView(R.id.id_tv)
-    //不能用private和static进行修饰，默认public        
-     TextView mTv;
-    @BindView(R.id.id_btn1)
-    Button mBtn1;
-    @BindView(R.id.id_btn2)
-    Button mBtn2;
-
-    // 注入资源
-    @BindString(R.string.hello_world)
-    String str;
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState)
-    {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        ButterKnife.bind(this);
-
-        mTv.setText(str);
-        mBtn1.setText("Hello");
-        mBtn2.setText("Imooc");
-
-    }
-
-    //注入事件
-    @OnClick({R.id.id_btn1, R.id.id_btn2})
-    public void btnClick(View view)
-    {
-        switch (view.getId())
-        {
-            case R.id.id_btn1:
-                Toast.makeText(this, "Btn1 Clicked!", Toast.LENGTH_SHORT).show();
-                break;
-            case R.id.id_btn2:
-                Toast.makeText(this, "Btn2 Clicked!", Toast.LENGTH_SHORT).show();
-                break;
-        }
-
-    }
-```
-2.   注入ListView
-```java
-public class CategoryAdapter extends ArrayAdapter<String>
-{
-    private LayoutInflater mInflater;
-
-    public CategoryAdapter(Context context, List<String> objects)
-    {
-        super(context, -1, objects);
-
-        mInflater = LayoutInflater.from(context);
-    }
-
-    @Override
-    public View getView(int position, View convertView, ViewGroup parent)
-    {
-        ViewHolder holder = null;
-        if (convertView == null)
-        {
-            convertView = mInflater.inflate(R.layout.item_category, parent, false);
-            holder = new ViewHolder(convertView);
-            convertView.setTag(holder);
-        } else
-        {
-            holder = (ViewHolder) convertView.getTag();
-        }
-
-        holder.mTextView.setText(getItem(position));
-        return convertView;
-    }
-
-    static class ViewHolder
-    {
-        @BindView(R.id.id_title_tv)
-        TextView mTextView;
-
-        public ViewHolder(View view)
-        {
-
-            ButterKnife.bind(this, view);
-        }
-
-    }
-```
-
-```java
-public class CategoryActivity extends AppCompatActivity
-{
-
-    @BindView(R.id.id_listview)
-    ListView mListView;
-
-    //listview的数据
-    private List<String> mData = new ArrayList<>(Arrays.asList("Simple Use", "RecyclerView Use"));
-
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState)
-    {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_category);
-
-        ButterKnife.bind(this);
-
-        mListView.setAdapter(new CategoryAdapter(this, mData));
-
-    }
-
-    @OnItemClick(R.id.id_listview)
-    public void itemClicked(int position)
-    {
-        Toast(...);
-    }
-
-```
-3. 注入RecuclerView
-```java
-  @OnItemClick(R.id.id_listview)
-    public void itemClicked(int position)
-    {
-        Intent intent = null;
-        switch (position)
-        {
-            case 0:
-                intent = new Intent(this, MainActivity.class);
-                break;
-            case 1:
-                intent = new Intent(this, RecyclerViewActivity.class);
-                break;
-        }
-        if (intent != null)
-            startActivity(intent);
-    }
-```
-```java
-public class RecyclerViewActivity extends AppCompatActivity
-{
-    @BindView(R.id.id_recyclerview)
-    RecyclerView mRecyclerView;
-
-    private List<String> mDatas = new ArrayList<>(Arrays.asList("Simple Use", "RecyclerView Use"));
-
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState)
-    {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_recycler_view);
-
-        ButterKnife.bind(this);
-
-        mRecyclerView.setAdapter(new RvAdapter(this, mDatas));
-        mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu)
-    {
-        // Inflate the menu; this adds items to the action bar if it is present.
-        getMenuInflater().inflate(R.menu.menu_recycler_view, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item)
-    {
-        // Handle action bar item clicks here. The action bar will
-        // automatically handle clicks on the Home/Up button, so long
-        // as you specify a parent activity in AndroidManifest.xml.
-        int id = item.getItemId();
-
-        //noinspection SimplifiableIfStatement
-        if (id == R.id.action_settings)
-        {
-            return true;
-        }
-
-        return super.onOptionsItemSelected(item);
-    }
-  }
-```
-```java
-public class RvAdapter extends RecyclerView.Adapter<RvAdapter.ViewHolder>
-{
-    private LayoutInflater mInflater;
-    private List<String> mDatas;
-
-    public RvAdapter(Context context, List<String> datas)
-    {
-        mInflater = LayoutInflater.from(context);
-        mDatas = datas;
-    }
-
-    @Override
-    public ViewHolder onCreateViewHolder(ViewGroup viewGroup, int i)
-    {
-        return new RvAdapter.ViewHolder(mInflater.inflate(R.layout.item_category, viewGroup, false));
-    }
-
-    @Override
-    public void onBindViewHolder(ViewHolder viewHolder, int i)
-    {
-        viewHolder.mTextView.setText(mDatas.get(i));
-    }
-
-    @Override
-    public int getItemCount()
-    {
-        return mDatas.size();
-    }
-
-    static class ViewHolder extends RecyclerView.ViewHolder
-    {
-        @BindView(R.id.id_title_tv)
-        TextView mTextView;
-
-        public ViewHolder(View itemView)
-        {
-            super(itemView);
-            ButterKnife.bind(this, itemView);
-        }
-    }
-```
 4. ButterKnife Zelezny插件
    * 导入后，右键 Generate ButterKnife Injections，可以自动声明控件和onclick方法
    * 导入后，右键 Generate ButterKnife Injections，可以自动声明viewholder方法
@@ -4230,6 +3801,7 @@ getContentResolver().unregisterContentObserver（uri）；
 #### 1. 加载bitmap的方式
 bitmapFactory提供四类方法，分别从文件系统、资源、输入流和字节数组中加载bitmap对象
 #### 2. BitmapFactory.Options的参数
+Bitamp 占用内存大小 = 宽度像素 x （inTargetDensity / inDensity） x 高度像素 x （inTargetDensity / inDensity）x 一个像素所占的内存
 1. inSampleSize参数
    * 采样率，设置图片的像素的宽和高
    * 值 = 1，即为原始大小
@@ -4418,6 +3990,7 @@ IntentService是Android的一个封装类，继承自Service
 原理：把最近使用的对象，用强引用，存储在LinkedHashMap中，当缓存满时，把最近最少使用的对象从内存中移除。并提供了get和put方法来完成
 
 #### 2. 使用
+默认缓存大小是可用内存的八分之一
 ```java
     int maxMemory = (int) (Runtime.getRuntime().totalMemory() / 1024);
     int cacheSize = maxMemory / 8;
@@ -4433,7 +4006,7 @@ IntentService是Android的一个封装类，继承自Service
 
 ### 三 实现原理
 维护一个缓存对象列表，排列方式按照访问顺序实现，即一直没访问的对象放在队尾，最近访问的对象放在队头。
-#### 1. LinkedHashMap
+#### 1. LinkedHashMap——使用这个链表的原因是accessOrder参数为true时会以访问顺序为序排列元素。否则以插入顺序为序排列元素。
 1. 数组+双向链表
 2. accessOrder设置为true按照访问顺序，最近访问的最后输出。
 
