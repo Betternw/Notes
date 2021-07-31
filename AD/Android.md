@@ -93,6 +93,10 @@ context对象被单例引用持有，当Activity退出时引用还被持有。
 #### 四 匿名内部类
 1. 继承实现Activity/Fragment/View的类中使用了匿名类，这个匿名类的实现对象会持有外部类的引用，如果将匿名类的对象引用传入一个异步线程，这个线程和Activity生命周期不一致的时候，就会造成泄漏
 
+#### 五
+1. 构造Adapter时，没有使用缓存的convertView。getView()的第二个形参View convertView就是被缓存起来的list item的view对象(初始化时缓存中没有view对象则convertView是null)。由此可以看出，如果我们不去使用 convertView，而是每次都在getView()中重新实例化一个View对象的话，即浪费资源也浪费时间，也会使得内存占用越来越大。
+2. 没有取消注册：广播
+
 #### 内存溢出
 1. java.lang.OutOfMemoryError: Java heap space ------>java堆内存溢出，一般由于内存泄露或者堆的大小设置不当引起。对于内存泄露，需要通过内存监控软件查找程序中的泄露代码，而堆大小可以通过虚拟机参数-Xms,-Xmx等修改。
 2. java.lang.OutOfMemoryError: PermGen space ------>java永久代溢出，即方法区溢出了，一般出现于大量Class或者jsp页面，或者采用cglib等反射机制的情况，因为上述情况会产生大量的Class信息存储于方法区。此种情况可以通过更改方法区的大小来解决，使用类似-XX:PermSize=64m -XX:MaxPermSize=256m的形式修改。另外，过多的常量尤其是字符串也会导致方法区溢出。
