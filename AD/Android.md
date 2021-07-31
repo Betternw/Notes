@@ -77,7 +77,7 @@ bitmap优化:
 集合中的元素只添加不删除
 
 #### 二 单例造成的内存泄露
-context对象被单例引用持有，当Activity退出时引用还被持有。
+context对象被单例引用持有，当Activity退出时引用还被持有。 
 改进：使用Application的context
 
 #### 三 非静态内部类创造静态实例造成内部泄露
