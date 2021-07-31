@@ -69,7 +69,10 @@ bitmap优化:
 
 ### 五 线程优化
 1. 采用线程池，重用其中的线程
-## <span id = "2">第一章</span>
+
+## <span id = "2">内存泄露汇总</span>
+内存泄露是指程序中已动态分配的堆内存由于某种原因程序未释放或无法释放，造成系统内存的浪费。而当可用内存变少时，程序当申请内存时，没有足够的控件供其使用，就会出现OOM内存溢出。
+#### 内存泄露
 #### 一 集合类泄露
 集合中的元素只添加不删除
 
@@ -84,6 +87,10 @@ context对象被单例引用持有，当Activity退出时引用还被持有。
 #### 四 匿名内部类
 1. 继承实现Activity/Fragment/View的类中使用了匿名类，这个匿名类的实现对象会持有外部类的引用，如果将匿名类的对象引用传入一个异步线程，这个线程和Activity生命周期不一致的时候，就会造成泄漏
 
+#### 内存溢出
+1. java.lang.OutOfMemoryError: Java heap space ------>java堆内存溢出，一般由于内存泄露或者堆的大小设置不当引起。对于内存泄露，需要通过内存监控软件查找程序中的泄露代码，而堆大小可以通过虚拟机参数-Xms,-Xmx等修改。
+2. java.lang.OutOfMemoryError: PermGen space ------>java永久代溢出，即方法区溢出了，一般出现于大量Class或者jsp页面，或者采用cglib等反射机制的情况，因为上述情况会产生大量的Class信息存储于方法区。此种情况可以通过更改方法区的大小来解决，使用类似-XX:PermSize=64m -XX:MaxPermSize=256m的形式修改。另外，过多的常量尤其是字符串也会导致方法区溢出。
+3. java.lang.StackOverflowError ------> 不会抛OOM error，但也是比较常见的Java内存溢出。JAVA虚拟机栈溢出，一般是由于程序中存在死循环或者深度递归调用造成的，栈大小设置太小也会出现此种溢出。可以通过虚拟机参数-Xss来设置栈的大小。
 #### 五 Handler造成的泄露
 1.  Handler 发送的 Message 尚未被处理，则该 Message 及发送它的 Handler 对象将被线程 MessageQueue 一直持有。当Activity被finish掉的时候，延迟执行任务的 Message 还会继续存在于主线程中，它持有该 Activity 的 Handler 引用（Handler是非静态内部类，持有外部类的引用），所以此时 finish() 掉的 Activity 就不会被回收了从而造成内存泄漏
 2.  改进：将 Handler 声明为静态的；通过弱引用的方式引入 Activity，避免直接将 Activity 作为 context 传进去
