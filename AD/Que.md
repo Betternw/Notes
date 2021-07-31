@@ -1,5 +1,10 @@
 1. 什么是ANR 如何避免它？
    * 在Android上，如果你的应用程序有一段时间响应不够灵敏，系统会向用户显示一个对话框，这个对话框称作应 用程序无响应（ANR：Application NotResponding）对话框。
+   * 造成ANR：
+     * 5秒内无法响应屏幕触摸事件或键盘输入事件
+     * 在执行前台广播的onReceive函数时10秒没有处理完成，后台为60秒
+     * 前台服务20秒内没有执行完毕
+     * contentprovider的publish在10s内没进行完（application将contentprovider安装好后，通过publish往AMS中publish）
    * 不同的组件发生ANR的时间不一样，Activity是5秒，BroadCastReceiver是10秒，Service是20秒（均为前台）
    * 主线程中存在耗时的计算、BroadcastReceiver未在10秒内完成相关的处理、Service在特定的时间内无法处理完成 20秒
    * 将所有耗时操作，比如访问网络，Socket通信，查询大 量SQL 语句，复杂逻辑计算等都放在子线程中去，使用AsyncTask、handler.sendMessage等方式更新UI
