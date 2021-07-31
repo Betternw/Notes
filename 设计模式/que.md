@@ -29,7 +29,7 @@
     * 静态代理使用场景：四大组件同AIDL与AMS进行跨进程通信
     * 动态代理使用场景：Retrofit使用了动态代理极大地提升了扩展性和可维护性。
 7. 单例模式
-恶汉：直接实例化好,浪费资源，线程不安全
+恶汉：类加载的时候就直接实例化好,浪费资源，线程不安全
 ```java
 public class Singleton1 {
     private static final Singleton1 INSTANCE = new Singleton1();
@@ -40,7 +40,7 @@ public class Singleton1 {
 }
 ```
 
-懒汉式：线程不安全
+懒汉式：线程不安全，因为当进行 new Singleton3()的时候，这个操作不是一个原子操作另一个线程因为instance此时仍然为空，也会进入if判断，那么两个线程继续执行就会产生两个不同的实例。
 ```java
 public class Singleton3 {
     private static Singleton3 INSTANCE = null;
@@ -53,7 +53,7 @@ public class Singleton3 {
     }
 }
 ```
-懒汉式：线程安全，synchronized修饰方法，效率低。
+懒汉式：线程安全，synchronized修饰方法，范围过大效率低。
 ```java
 public class Singleton4 {
     private static Singleton4 INSTANCE = null;
@@ -66,7 +66,8 @@ public class Singleton4 {
     }
 }
 ```
-双重校验：
+双重校验：synchronized关键字外部有一层判断，只要实例被创建了，就不会再进入同步代码块，而锁住方法的话每次都会进入同步代码块。
+那么锁内部还加一次判断的原因：如果线程A到了new的步骤还没new完，此时变量还是null，就有线程B经过判断后来到syn锁这里，线程A创建完对象后释放锁，线程B没有经过判断又会执行初始化操作。
 ```java
 public class Singleton{
   private volatile static Singleton instance;
@@ -87,3 +88,4 @@ public class Singleton{
 }
 ```
 new对象：分配内存给这个对象、初始化这个对象、把INSTANCE变量指向初始化的对象，不是原子操作。使用volatile关键字可以解决重排序的问题
+volatile：解决重排序，保证可见性，使得变量的修改能够及时被其他线程所知
