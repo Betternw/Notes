@@ -35,29 +35,37 @@
     * 轻量级锁：轻量级锁是由偏向所升级来的，偏向锁运行在一个线程进入同步块的情况下，当第二个线程加入锁竞争用的时候，偏向锁就会升级为轻量级锁；无实际竞争，多个线程交替使用锁；允许短时间的锁竞争。
     * 重量级锁：有实际竞争，且锁竞争时间长。重量锁在JVM中又叫对象监视器（Monitor），它很像C中的Mutex，除了具备Mutex(0|1)互斥的功能，它还负责实现了Semaphore(信号量)的功能，也就是说它至少包含一个竞争锁的队列，和一个信号阻塞队列（wait队列），前者负责做互斥，后一个用于做线程同步。
 7. 谈谈对Synchronized关键字涉及到的类锁，方法锁，重入锁的理解？
+    * 可以修饰代码块、方法、静态方法、变量
     * 修饰静态方法获取的是类锁——同一个类的两个不同的对象也可以保持同步
     * 修饰普通方法或代码块获取的是对象锁。这种机制确保了同一时刻对于每一个类实例，其所有声明为 synchronized 的成员函数中至多只有一个处于可执行状态，从而有效避免了类成员变量的访问冲突。——修饰普通方法锁的是当前对象，如果创建一个新的对象则不能保持同步，
     * 访问对象锁和类锁互相不冲突，可以同时持有  
 8. wait、sleep的区别和notify运行过程。
     * wait、sleep的区别
-      * 最大的不同是在等待时 wait 会释放锁，而 sleep 一直持有锁。wait 通常被用于线程间交互，sleep 通常被用于暂停执行。
+      * 最大的不同是在等待时 wait 会释放锁，因此需要在同步的上下文中调用而 sleep 一直持有锁。wait 通常被用于线程间交互，sleep 通常被用于暂停执行。
+      * Thread.sleep方法是一个静态方法，作用在当前线程上，wait方法是一个实例方法，并且只能在其他线程调用本实例的notify方法时被唤醒。
+      * sleep方法使用后线程被唤醒后会进入就绪态，wait方法被唤醒后先获得锁，才能进入就绪态
+      * 如果线程暂定一段特定的时间使用sleep，进程间通信使用wait方法
+      * sleep和wait都可以响应中断
+      * 使用场景：sleep一般用于使当前线程进入阻塞状态并且继续持有锁，一般是让线程等待，wait方法一般用于多线程的通信，需要配合notify或者notifyall来进行使用，例如：生产者，消费者模式就需要使用wait，notify方法
       * “sleep是Thread类的方法,wait是Object类中定义的方法”。尽管这两个方法都会影响线程的执行行为，但是本质上是有区别的。
       * Thread.sleep不会导致锁行为的改变，如果当前线程是拥有锁的，那么Thread.sleep不会让线程释放锁。如果能够帮助你记忆的话，可以简单认为和锁相关的方法都定义在Object类中，因此调用Thread.sleep是不会影响锁的相关行为。
       * Thread.sleep和Object.wait都会暂停当前的线程，对于CPU资源来说，不管是哪种方式暂停的线程，都表示它暂时不再需要CPU的执行时间。OS会将执行时间分配给其它线程。区别是，调用wait后，需要别的线程执行notify/notifyAll才能够重新获得CPU执行时间。
       * 线程的状态参考 Thread.State的定义。新创建的但是没有执行（还没有调用start())的线程处于“就绪”，或者说Thread.State.NEW状态。
       * Thread.State.BLOCKED（阻塞）表示线程正在获取锁时，因为锁不能获取到而被迫暂停执行下面的指令，一直等到这个锁被别的线程释放。BLOCKED状态下线程，OS调度机制需要决定下一个能够获取锁的线程是哪个，这种情况下，就是产生锁的争用，无论如何这都是很耗时的操作。
+    * yield和sleep的区别
+      * yield是暂停当前正在执行的线程，让有同样优先级的正在等待的线程有机会执行。执行了yield方法的线程什么时候会继续运行由线程调度器来决定
     * notify运行过程
       * 当线程A（消费者）调用wait()方法后，线程A让出锁，自己进入等待状态，同时加入锁对象的等待队列。 线程B（生产者）获取锁后，调用notify方法通知锁对象的等待队列，使得线程A从等待队列进入阻塞队列。 线程A进入阻塞队列后，直至线程B释放锁后，线程A竞争得到锁继续从wait()方法后执行。
-9. volatile原理。
-    * 解决可见性有序性问题
+9.  volatile原理。
+    * 解决可见性和禁止指令重排序
     * 对volatile变量的单次读/写操作可保证原子性的，如long和double类型变量，但是并不能保证i++这种操作的原子性，因为本质上i++是读、写两次操作。原子性是指一个线程的操作是不能被其他线程打断，同一时间只有一个线程对一个变量进行操作。三个步骤：内存到寄存器、寄存器自增、写回内存
     * volatile也是互斥同步的一种实现，不过它非常的轻量级。
     * 防止CPU指令重排序
-      * 指令重排序是指指令乱序执行，即在条件允许的情况下直接运行当前有能力立即执行的后续指令，避开为获取一条指令所需数据而造成的等待，通过乱序执行的技术提供执行效率。
-      * 指令重排序会在被volatile修饰的变量的赋值操作前，添加一个内存屏障，指令重排序时不能把后面的指令重排序移到内存屏障之前的位置。
+        * 指令重排序是指指令乱序执行，即在条件允许的情况下直接运行当前有能力立即执行的后续指令，避开为获取一条指令所需数据而造成的等待，通过乱序执行的技术提供执行效率。
+        * 指令重排序会在被volatile修饰的变量的赋值操作前，添加一个内存屏障，指令重排序时不能把后面的指令重排序移到内存屏障之前的位置。
     * 保证被volatile修饰的变量对所有线程都是可见的
-      * 每个线程会 有自己的工作内存，工作内存里保存了线程所使用到的变量在主内存里的副本拷贝，线程对变量的操作只能在工作内存里进行，而不能直接读写主内存，当然不同内存之间也 无法直接访问对方的工作内存，
-      * 被volatile修饰的变量在工作内存修改后会被强制写回主内存，其他线程在使用时也会强制从主内存刷新，这样就保证了一致性。
+        * java的线程模型：每个线程会 有自己的工作内存，工作内存里保存了线程所使用到的变量在主内存里的副本拷贝，线程对变量的操作只能在工作内存里进行，而不能直接读写主内存，当然不同内存之间也 无法直接访问对方的工作内存，
+        * 被volatile修饰的变量在工作内存修改后会被强制写回主内存，其他线程在使用时也会强制从主内存刷新，这样就保证了一致性。
     * 可见性原理
       * 缓存一致性原理：当CPU写数据时，如果操作的数据是共享变量，就会通知其他CPU该变量的缓存无效，当需要使用时，需要到内存重新读取。
       * 嗅探：每个CPU会通过嗅探在总线上的数据和自己的缓存比较，如果发现变量的缓存地址被修改，就将缓存置为无效
@@ -72,7 +80,6 @@
 11. 多线程的使用场景
     * 使用多线程并不是为了提高效率，而是使得CPU能同时处理多个事件。
     * 为了不阻塞主线程,启动其他线程来做事情,比如APP中的耗时操作都不在UI线程中做。
-    * 某种虽然优先级很低的服务，但是却要不定时去做。比如Jvm的垃圾回收。
     * 某种虽然优先级很低的服务，但是却要不定时去做。比如Jvm的垃圾回收。
 12. CopyOnWriteArrayList的了解。
     * Copy-On-Write 是什么？
@@ -198,4 +205,124 @@
         * 大部分线程的上下文切换都发生在用户空间，减少了模态切换带来的开销
         * 使用内核提供的线程调度功能，可以实现真正的并行，并降低了整个进程被完全阻塞的风险
   * 总结：java的线程是映射到操作系统的原生线程上的。不同的操作系统可能使用不同的线程模型，例如 Linux 和 windows 可能使用了一对一模型，solaris 和 unix 某些版本可能使用多对多模型。
+29. java的内存模型
+  * 线程安全：控制多个线程对某个资源的有序访问或修改
+  * java的内存模型：可见性、有序性。JVM定义了自己的内存模型，屏蔽了底层平台内存管理细节，对于java开发人员，要清楚在jvm内存模型的基础 上，如果解决多线程的可见性和有序性。
+  * 可见性：
+      * 当线程操作某个对象的时候，执行顺序：从主从复制变量到当前工作内存、执行代码改变共享变量值、用工作内存数据刷新主存相关内容
+      * 当一个线程修改了这个共享变量，那么其他线程应该能够看到这个被修改后的值。这就是可见性
+  * 有序性：
+      * 当同一线程多次重复对某一字段进行赋值，比如a++，只有最后一次赋值后才同步到主存中。那么如果有另一个线程也对这个变量进行操作的话，最后同步到主存的值是不可靠的。在多线程的情况下要保证是有序执行的。
+  * synchronize——解决有序性和可见性
+  * volatile——解决可见性
+30. 死锁代码：
+当线程A持有独占锁a，并尝试去获取独占锁b的同时，线程B持有独占锁b，并尝试获取独占锁a的情况下，就会发生AB两个线程由于互相持有对方需要的锁，而发生的阻塞现象，我们称为死锁。
+```java
+  public static void main(String[] args) {
+        final Object a = new Object();
+        final Object b = new Object();
+        Thread threadA = new Thread(new Runnable() {
+            public void run() {
+                synchronized (a) {
+                    try {
+                        Thread.sleep(1000);
+                        synchronized (b) {
+                        }
+                    } catch (Exception e) {
+                        // TODO: handle exception
+                    }
+                }
+            }
+        });
+        Thread threadB = new Thread(new Runnable() {
+            public void run() {
+                synchronized (b) {
+                    try {
+                        Thread.sleep(1000);
+                        synchronized (a) {
+                        }
+                    } catch (Exception e) {
+                        // TODO: handle exception
+                    }
+                }
+            }
+        });
+        
+        threadA.start();
+        threadB.start();
+    }
+```
+1.  ThreadLocal
+* 实现单个线程单例以及单个线程上下文信息存储，比如交易id等。
+* 实现线程安全，非线程安全的对象使用ThreadLocal之后就会变得线程安全，因为每个线程都会有一个对应的实例。
+* 承载一些线程相关的数据，避免在方法中来回传递参数。
+32. 生产者消费者模型
+生产者和消费者在同一时间段内共用同一个存储空间，生产者往存储空间中添加产品，消费者从存储空间中取走产品，当存储空间为空时，消费者阻塞，当存储空间满时，生产者阻塞。
+wait()和notify()方法的实现生成者消费者模型，缓冲区满和为空时都调用wait()方法等待，当生产者生产了一个产品或者消费者消费了一个产品之后会唤醒所有线程。
+```java
+public class ProducerAndCustomerModel {
+    
+    private static Integer count = 0;
+    private static final Integer FULL = 10;
+    private static String LOCK = "lock";
+    
+    public static void main(String[] args) {
+        Test1 test1 = new Test1();
+        new Thread(test1.new Producer()).start();
+        new Thread(test1.new Consumer()).start();
+        new Thread(test1.new Producer()).start();
+        new Thread(test1.new Consumer()).start();
+        new Thread(test1.new Producer()).start();
+        new Thread(test1.new Consumer()).start();
+        new Thread(test1.new Producer()).start();
+        new Thread(test1.new Consumer()).start();
+    }
+    class Producer implements Runnable {
+        @Override
+        public void run() {
+            for (int i = 0; i < 10; i++) {
+                try {
+                    Thread.sleep(3000);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+                synchronized (LOCK) {
+                    while (count == FULL) {
+                        try {
+                            LOCK.wait();
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    count++;
+                    System.out.println(Thread.currentThread().getName() + "生产者生产，目前总共有" + count);
+                    LOCK.notifyAll();
+                }
+            }
+        }
+    }
+    class Consumer implements Runnable {
+        @Override
+        public void run() {
+            for (int i = 0; i < 10; i++) {
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                synchronized (LOCK) {
+                    while (count == 0) {
+                        try {
+                            LOCK.wait();
+                        } catch (Exception e) {
+                        }
+                    }
+                    count--;
+                    System.out.println(Thread.currentThread().getName() + "消费者消费，目前总共有" + count);
+                    LOCK.notifyAll();
+                }
+            }
+        }
+    }
 
+```
