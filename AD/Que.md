@@ -7,7 +7,7 @@
      * contentprovider的publish在10s内没进行完（application将contentprovider安装好后，通过publish往AMS中publish）
    * 不同的组件发生ANR的时间不一样，Activity是5秒，BroadCastReceiver是10秒，Service是20秒（均为前台）
    * 主线程中存在耗时的计算、BroadcastReceiver未在10秒内完成相关的处理、Service在特定的时间内无法处理完成 20秒
-   * 将所有耗时操作，比如访问网络，Socket通信，查询大 量SQL 语句，复杂逻辑计算等都放在子线程中去，使用AsyncTask、handler.sendMessage等方式更新UI
+   * 将所有耗时操作，比如访问网络，Socket通信，查询大 量SQL 语句，复杂逻辑计算等都放在子线程中去，使用AsyncTask、handler.Activity的onCreate和onResume回调中尽量避免耗时的代码。 BroadcastReceiver中onReceive代码也要尽量减少耗时，建议使用IntentService处理。sendMessage等方式更新UI
 2. Activity和Fragment生命周期有哪些？https://camo.githubusercontent.com/85eb508cd8e5d6077f3a9f0fe9e513182e2d8474/68747470733a2f2f75706c6f61642d696d616765732e6a69616e7368752e696f2f75706c6f61645f696d616765732f323839333133372d643633353337373033313933613664312e706e673f696d6167654d6f6772322f6175746f2d6f7269656e742f
 3. 横竖屏切换时候Activity的生命周期
    * 不设置Activity的android:configChanges时，切屏会重新回调各个生命周期，切横屏时会执行一次，切竖屏时会执行两次。
@@ -135,7 +135,7 @@ bind的方式开启服务，绑定服务，调用者挂了，服务也会跟着�
 34. Handler、Thread和HandlerThread的差别
 * Handler：在android中负责发送和处理消息，通过它可以实现其他支线线程与主线程之间的消息通讯。
 * Thread：Java进程中执行运算的最小单位，亦即执行处理机调度的基本单位。某一进程中一路单独运行的程序。
-* HandlerThread：因为多次创建和销毁线程是很耗费资源的。继承自Thread的类HandlerThread，本质就是个Thread。在内部直接实现了Looper的实现，这是Handler消息机制必不可少的。有了自己的looper，可以在自己的线程中分发和处理消息，执行异步任务。它不需要我们去拿主线程的Looper，也不用手动调用Looper.prepare和Looper.loop，它已经封装了Looper。handler是在主线程中创建的，handlerthread可以在子线程使用自己的handler。不想多次创建线程时——线程池、handlerThread
+* HandlerThread：因为多次创建和销毁线程是很耗费资源的。继承自Thread的类HandlerThread，本质就是个Thread。在内部直接实现了Looper的实现，这是Handler消息机制必不可少的。有了自己的looper，可以在自己的线程中分发和处理消息，执行异步任务。它不需要我们去拿主线程的Looper，也不用手动调用Looper.prepare和Looper.loop，它已经封装了Looper。handler是在主线程中创建的，handlerthread可以在子线程使用自己的handler。不想多次创建线程时——线程池、HandlerThread与线程池不同，HandlerThread是一个串队列，背后只有一个线程。
 35.  ThreadLocal的原理
 * ThreadLocal相当于线程内的内存，一个局部变量。每次可以对线程自身的数据读取和操作，并不需要通过缓冲区与 主内存中的变量进行交互。并不会像synchronized那样修改主内存的数据，再将主内存的数据复制到线程内的工作内存。ThreadLocal可以让线程独占资源，存储于线程内部，避免线程堵塞造成CPU吞吐下降。
 * 实现单个线程单例以及单个线程上下文信息存储，比如交易id等。实现线程安全，非线程安全的对象使用ThreadLocal之后就会变得线程安全，因为每个线程都会有一个对应的实例。 承载一些线程相关的数据，避免在方法中来回传递参数。
@@ -260,8 +260,9 @@ mHandlerThread .start();
 52. service和thread区别；————service运行在主线程中，不能运行耗时操作，是执行在后台不依赖于activity的，与是否耗时没有关系。，与activity通信通过async。————thread是子线程，可以运行耗时操作。是分配cpu的基本单位。
 53. 广播：应用程序之间传输信息，发送的内容是intent，intent携带数据；同一个app之间不同组件的消息通信、不同app之间的组件的相互通信；普通广播、系统广播、本地广播（只在app内传播）；静态注册：注册完成后一直运行，动态注册：跟随activity的生命周期。内部实现机制：binder机制
 54. 启动service的方式：
-  * startservice：activity销毁了不会影响service，传递的参数是intent。第一次调用startService方法时，onCreate方法、onStartCommand方法将依次被调用，而多次调用startService时，只有onStartCommand方法会被多次调用。
-  * bindservice（通过ibinder接口与activity进行绑定），传递的参数是binder
+  * startservice：activity销毁了不会影响service，传递的参数是intent。第一次调用startService方法时，onCreate方法、onStartCommand方法将依次被调用，而多次调用startService时，只有onStartCommand方法会被多次调用。旦服务开启跟调用者(开启者)就没有任何关系了。 开启者退出了，开启者挂了，服务还在后台长期的运行。 开启者不能调用服务里面的方法。
+  * bindservice（通过ibinder接口与activity进行绑定），传递的参数是binder。bind的方式开启服务，绑定服务，调用者挂了，服务也会跟着挂掉。 绑定者可以调用服务里面的方法。
+  * 通信：binder、广播
 55.  Service和IntentService的区别：
    * service不可以执行耗时操作，因此创建intentService，继承自service，在onCreate的时候，建立一个内部的线程去执行耗时操作。
 56. onStartCommand四种返回值策略
@@ -294,11 +295,20 @@ mHandlerThread .start();
      * 非静态内部类引用了外部类的引用。handler没有被释放，持有的引用没有必要释放，会内存释放——设置为静态内部类，在类内持有外部类的弱引用（弱引用也是用来描述非必需对象的，当JVM进行垃圾回收时，无论内存是否充足，都会回收被弱引用关联的对象）
        * 静态内部类不依赖于外部类实例被实例化。而通常的内部类需要在外部类实例化后才能实例化。普通的内部类对象隐含地保存了一个引用，指向创建它的外围类对象。然而，当内部类是static的时，就不是这样了。
        * 静态内部类不含有外部类的引用，所以不能访问外部类的非静态成员和方法。
-     * Handler 引起的内存泄露原因以及最佳解决方案——当Handler消息队列 还有未处理的消息 / 正在处理消息时，存在引用关系： “未被处理 / 正处理的消息Message持有Handler实例的引用，handler又持有外部类的引用。——将 Handler 定义成静态的内部类，在内部持有 Activity 的弱引用，
+     * Handler 引起的内存泄露原因以及最佳解决方案——当Handler消息队列 还有未处理的消息 / 正在处理消息时，存在引用关系： “未被处理 / 正处理的消息Message持有Handler实例的引用，handler又持有外部类的引用。——将 Handler 定义成静态的内部类，在内部持有 Activity 的弱引用，并在Acitivity的onDestroy()中调用handler.removeCallbacksAndMessages(null)及时移除所有消息。
    * Looper循环为什么不会导致应用卡死
      * 因为死循环的作用是保证不断循环，主线程可以一直处于运行状态。通过loop循环遍历MessageQueue,然后通过H handler类的handleMessage方法去处理activity相关的start、pause、stop、destroy等各类事件。真正卡死主线程操作的是在回调方法onCreate、onStart、onResume等操作时间过长，会导致掉帧甚至ANR，Looper.loop()本身不会导致应用卡死。
    * 主线程的死循环一直运行是不是特别消耗 CPU 资源呢？Handler底层是如何唤醒的？
        * 在messagequeue中没有消息时，主线程会释放CPU资源进入休眠状态，当有下个消息到达时候，通过往pipe管道写端口写入数据来唤醒休眠的线程。这里采用IO多路复用，同时监控多个描述符，当某个描述符就绪(读或写就绪)，则立刻通知相应程序进行读或写操作，所以说，主线程大多数时候都是处于休眠状态，并不会消耗大量CPU资源。
+       * 主线程Looper是不允许退出的，退出意味着App要挂
+   * Handler 里藏着的 Callback 能干什么？
+       * Handler.Callback 有优先处理消息的权利 ，当一条消息被 Callback 处理并拦截（返回 true），那么 Handler 的 handleMessage(msg) 方法就不会被调用了
+       * 如果 Callback 处理了消息，但是并没有拦截，那么就意味着一个消息可以同时被 Callback 以及 Handler 处理。
+   * 创建Message的方式
+       * 通过 Message 的静态方法 Message.obtain()；
+       * 通过 Handler 的公有方法 handler.obtainMessage()。
+   * handler postDelay这个延迟是怎么实现的？
+       * handler.postDelay并不是先等待一定的时间再放入到MessageQueue中，而是直接进入MessageQueue，以MessageQueue的时间顺序排列和唤醒的方式结合实现的。
    * ThreadLocal 是线程内部的数据存储类，ThreadLocalMap 是 ThreadLocal 的静态内部类，里面保存了一个 private Entry[] table 数组，这个数组就是用来保存 ThreadLocal 中的值。通过这种方式，就能让我们在多个线程中互不干扰地存储和修改数据。它是一个线程内部的数据存储类。
 59. 自定义View的绘制
    * View树的绘制流程：measure（是否需要计算视图大小）——layout（是否需要视图位置）——draw（是否需要重绘）
@@ -592,6 +602,50 @@ mHandlerThread .start();
   * 拉活已经被杀死的进程
     * 利用广播拉活Activity
 
-92. 
-
-
+92. 动画
+  * view动画——只是影像变化，view的实际位置还在原来地方
+    * 作用对象是view，可用xml定义
+    * 支持：平移、缩放、旋转、透明度
+  * 帧动画：—— 是在xml中定义好一系列图片之后，使用AnimatonDrawable来播放的动画。
+    * 通过 AnimationDrawable 实现，容易 OOM
+  * 属性动画
+    * 可作用于任何对象
+    * 包括 ObjectAnimator、ValuetAnimator、AnimatorSet
+  * 补间动画
+    * 通过指定View的初末状态和变化方式，对View的内容完成一系列的图形变换来实现动画效果。 Alpha, Scale ,Translate, Rotate。
+  * frame 帧动画
+    * AnimationDrawable控制animation-list.xml布局
+  * PropertyAnimation 属性动画3.0引入，属性动画核心思想是对值的变化。
+    * 计算动画完成比
+    * 计算插值，动画变化率
+    * 计算运动中的属性值
+93. activity的startActivity和context的startActivity区别？
+  * 从Activity中启动新的Activity时可以直接mContext.startActivity(intent)就好
+  * 如果从其他Context中启动Activity则必须给intent设置Flag,来设定Activity的启动模式
+```java
+intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK) ; 
+mContext.startActivity(intent);
+```
+94. 加速启动Activity
+    * onCreate() 中不执行耗时操作 把页面显示的 View 细分一下，放在 AsyncTask 里逐步显示，用 Handler 更好。这样用户的看到的就是有层次有步骤的一个个的 View 的展示，不会是先看到一个黑屏，然后一下显示所有 View。最好做成动画，效果更自然。
+    * 利用多线程的目的就是尽可能的减少 onCreate() 和 onReume() 的时间，使得用户能尽快看到页面，操作页面。
+    * 减少主线程阻塞时间。
+    * 提高 Adapter 和 AdapterView 的效率。
+    * 优化布局文件。
+95. Canvas.save()跟Canvas.restore()的调用时机
+  * save：用来保存Canvas的状态。save之后，可以调用Canvas的平移、放缩、旋转、错切、裁剪等操作。
+  * restore：用来恢复Canvas之前保存的状态。防止save后对Canvas执行的操作对后续的绘制有影响。
+  * save和restore要配对使用（restore可以比save少，但不能多），如果restore调用次数比save多，会引发Error。save和restore操作执行的时机不同，就能造成绘制的图形不同。
+96. 请解释安卓为啥要加签名机制。
+  * 发送者的身份认证 由于开发商可能通过使用相同的 Package Name 来混淆替换已经安装的程序，以此保证签名不同的包不被替换。
+  * 保证信息传输的完整性 签名对于包中的每个文件进行处理，以此确保包中内容不被替换。
+97. 计算view的嵌套层级
+```java
+private int getParents(ViewParents view){
+    if(view.getParents() == null) 
+        return 0;
+    } else {
+    return (1 + getParents(view.getParents));
+   }
+}
+```
