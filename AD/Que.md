@@ -1,3 +1,5 @@
+ * #### [什么是ANR 如何避免它？](#1)
+## <span id = "1"> 什么是ANR 如何避免它？</span>
 1. 什么是ANR 如何避免它？
    * 在Android上，如果你的应用程序有一段时间响应不够灵敏，系统会向用户显示一个对话框，这个对话框称作应 用程序无响应（ANR：Application NotResponding）对话框。
    * 造成ANR：
@@ -384,6 +386,10 @@ mHandlerThread .start();
        * binder驱动：binder机制分为四部分，binder驱动、客户端、服务端和serviceManager。对Binder机制来说，binder驱动是IPC通信的路由器，负责不同进程间的数据交互，
        * 为什么需要运行在内核空间：两个进程之间通信需要内核空间做支持（用户空间访问内核空间通过系统调用），因此binder需要运行在内核空间。
        * binder_mmap——binder内核空间和用户空间的数据传递：内存映射。将用户空间的一块内存区域映射到内核空间，映射关系建立后，用户对这块内存区域的修改可以直接反应到内核空间；反之内核空间对这段区域的修改也能直接反应到用户空间。因此binder操作数据只需要一次。
+       * binder的映射空间：
+           * 首先 Binder 驱动在内核空间创建一个数据接收缓存区。
+           * 接着在内核空间开辟一块内核缓存区，建立内核缓存区和内核中数据接收缓存区之间的映射关系，以及内核中数据接收缓存区和接收进程用户空间地址的映射关系。
+           * 发送方进程通过系统调用 copyfromuser() 将数据 copy 到内核中的内核缓存区，由于内核缓存区和接收进程的用户空间存在内存映射，因此也就相当于把数据发送到了接收进程的用户空间，这样便完成了一次进程间的通信。
      * 通信模型步骤
      * binder_ioctl()——匿名共享内存：共享内存映射的是一个硬盘中真实存在的文件，而匿名共享内存映射的是一个虚拟文件。使用匿名共享内存的好处：不用担心共享内存映射的文件被其他进程打开导致数据异常、即使通信很频繁也不会在硬盘中生成文件。binder驱动的读写操作都是通过这个匿名共享内存实现的。
        * 建立serviceManager，相当于通信录，
@@ -542,16 +548,19 @@ mHandlerThread .start();
 79. Service和Activity之间通信的几种方式
   * 通过Binder对象
   * 通过BroadCast方式
-80. onCreate()、onResume() 中可以获取View的宽高吗
-  * 不能。绘制最开始的调用方法是在onResume方法之后的，也就是说view的绘制流程是从onresume后开始的。
-81. View.post（）为什么可以获取
-    * 原本在onCreate中直接进行绘制不行，但是调用view.Post后，会将方法添加到队列尾部，保证了在layout结束以后才执行
-82. 事件分发
+80. 在ACTIVITY中获取某个view的宽高
+  *  View的measure过程和Activity的生命周期方法不是同步执行的，onCreate()、onResume() 中不可以获取View的宽高，绘制最开始的调用方法是在onResume方法之后的，也就是说view的绘制流程是从onresume后开始的。
+  *  解决方法
+     * view.Post(runnable)：原本在onCreate中直接进行绘制不行，但是调用view.Post后，会将方法添加到队列尾部，保证了在layout结束以后才执行。
+     * ViewTreeObserver#addOnGlobalLayoutListener：当View树的状态发生改变或者View树内部的View的可见性发生改变时，onGlobalLayout方法将被回调，然后在方法中进行view的宽高获取
+     *  Activity/View的onWindowFocusChanged：(含义：此时View已经初始化完毕，当Activity的窗口得到焦点和失去焦点时均会被调用一次)，在这个方法中进行view宽高的获取，但是需要注意的是，onWindowFocusChanged会被调用多次，当Activity的窗口得到焦点和失去焦点的时候都会被调用一次。
+81. 事件分发
   * 只有中间的ViewGroup有拦截方法，如果不拦截，就会交给view进行处理。
   * 子View可调用requestDisallowInterceptTouchEvent方法，来设置disallowIntercept=true，从而阻止父ViewGroup的onInterceptTouchEvent拦截操作
   * 如果View没有消费ACTION_DOWN事件，则之后的ACTION_MOVE等事件都不会再接收
   * onTouchListener onTouchEvent onClick 的执行顺序是什么样的？
     * 如果设置了onTouchListenerVBing且是enable，就执行ontouch——如果onTouch返回true，那么不执行onTouchEvent，不会执行OnClick()
+    * onTouchEvent中有onClickListener
 ——onTouch()返回false（该事件没被onTouch()消费掉） = 执行onTouchEvent() = 执行OnClick()
   * onClick() 的回调是在 onTouchEvent() 方法中调用，onTouchEvent() 不执行则 onClick() 不执行。
 83. 虚拟机
@@ -649,3 +658,6 @@ private int getParents(ViewParents view){
    }
 }
 ```
+98. 跨进程通信
+  * 开启多进程：在AndroidManifest中给四大组件指定属性android:process开启多进程模式，在内存允许的条件下可以开启N个进程。
+  * 
