@@ -1611,6 +1611,7 @@ main_tab_icon_home.xml:
 3. 这个MOVE事件将会被系统变成一个CANCEL事件传递给C的onTouchEvent方法
 4. 后续又来了一个MOVE事件，该MOVE事件才会直接传递给B的onTouchEvent()、
 5. C再也不会收到该事件列产生的后续事件。
+6. 如果触摸某个控件，但是又不是在这个控件的区域上抬起（移动到别的地方了），就会出现action_cancel。
 
 #### 注意：
 1. 如果ViewGroup A 拦截了一个半路的事件（如MOVE），这个事件将会被系统变成一个CANCEL事件并传递给子View；
@@ -4148,7 +4149,7 @@ protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
     * 其他view：通过父布局的MeasureSpec和自身的布局参数LayoutParams
       * 父布局是EXACTLY：子布局为EXACTLY时为自身具体大小，其他模式是父view的剩余尺寸
       * 父布局是AT_MOST：子布局为EXACTLY时为自身具体大小，其他模式是父view的剩余尺寸
-        * wrapparent和matchparent都是父view的剩余尺寸，为了显示区别，在自定义View时，需要重写onMeasure方法，处理wrap_content时的情况，进行特别指定。
+        * wrapparent和matchparent都是父view的剩余尺寸，为了显示区别，在自定义View时，需要重写onMeasure方法，处理wrap_content时的情况，进行特别指定：可以在wrap_content的情况下（对应MeasureSpec.AT_MOST）指定内部宽/高(mWidth和mHeight)。
       * 父布局是UNSPECIFIED：子布局为EXACTLY时为自身具体大小，剩下Matchparent和wrapparent都是0
     * 可以看出MeasureSpec的指定也是从顶层布局开始一层层往下去，父布局影响子布局
 3. view的测量流程
