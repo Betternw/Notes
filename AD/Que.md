@@ -1,5 +1,11 @@
  * #### [什么是ANR 如何避免它？](#1)
-## <span id = "1"> 什么是ANR 如何避免它？</span>
+ * #### [Activity和Fragment生命周期有哪些](#2)
+ * #### [binder和bundle](#3)
+ * #### [什么是ANR 如何避免它？](#1)
+ * #### [什么是ANR 如何避免它？](#1)
+ * #### [什么是ANR 如何避免它？](#1)
+ * #### [什么是ANR 如何避免它？](#1)
+#### <span id = "1"> 什么是ANR 如何避免它？</span>
 1. 什么是ANR 如何避免它？
    * 在Android上，如果你的应用程序有一段时间响应不够灵敏，系统会向用户显示一个对话框，这个对话框称作应 用程序无响应（ANR：Application NotResponding）对话框。
    * 造成ANR：
@@ -10,6 +16,8 @@
    * 不同的组件发生ANR的时间不一样，Activity是5秒，BroadCastReceiver是10秒，Service是20秒（均为前台）
    * 主线程中存在耗时的计算、BroadcastReceiver未在10秒内完成相关的处理、Service在特定的时间内无法处理完成 20秒
    * 将所有耗时操作，比如访问网络，Socket通信，查询大 量SQL 语句，复杂逻辑计算等都放在子线程中去，使用AsyncTask、handler.Activity的onCreate和onResume回调中尽量避免耗时的代码。 BroadcastReceiver中onReceive代码也要尽量减少耗时，建议使用IntentService处理。sendMessage等方式更新UI
+
+#### <span id = "2"> Activity和Fragment生命周期有哪些？</span>
 2. Activity和Fragment生命周期有哪些？https://camo.githubusercontent.com/85eb508cd8e5d6077f3a9f0fe9e513182e2d8474/68747470733a2f2f75706c6f61642d696d616765732e6a69616e7368752e696f2f75706c6f61645f696d616765732f323839333133372d643633353337373033313933613664312e706e673f696d6167654d6f6772322f6175746f2d6f7269656e742f
 3. 横竖屏切换时候Activity的生命周期
    * 不设置Activity的android:configChanges时，切屏会重新回调各个生命周期，切横屏时会执行一次，切竖屏时会执行两次。
@@ -374,6 +382,7 @@ mHandlerThread .start();
     * 传入context对象，调用load方法，使用into方法显示imageView
 68. Activity中onNewIntent方法的调用时机和使用场景？
    * 当启动模式为single Top的时候，如果栈顶有当前activity，那么复用这个activity，启动模式就是onnewintent（）方法。
+#### <span id = "3"> binder和bundle</span>
 69. binder和bundle
    * binder
      * 跨进程通信，客户端和服务端之间通信
@@ -384,7 +393,7 @@ mHandlerThread .start();
        * 安全性更高，socket是ip地址手动填写，会有安全性问题。binder要进行通信双方信息校验，所以更安全
      * 为什么需要binder驱动？放在用户空间行不行
        * binder驱动：binder机制分为四部分，binder驱动、客户端、服务端和serviceManager。对Binder机制来说，binder驱动是IPC通信的路由器，负责不同进程间的数据交互，
-       * 为什么需要运行在内核空间：两个进程之间通信需要内核空间做支持（用户空间访问内核空间通过系统调用），因此binder需要运行在内核空间。
+       * 为什么需要运行在内核空间：两个进程之间通信需要内核空间做支持（用户空间访问内核空间通过系统调用），因此binder需要运行在内核空间。Binder框架 是基于 C/S 架构的。由一系列的组件组成，包括 Client、Server、ServiceManager、Binder驱动，其中 Client、Server、Service Manager 运行在用户空间，Binder 驱动运行在内核空间。
        * binder_mmap——binder内核空间和用户空间的数据传递：内存映射。将用户空间的一块内存区域映射到内核空间，映射关系建立后，用户对这块内存区域的修改可以直接反应到内核空间；反之内核空间对这段区域的修改也能直接反应到用户空间。因此binder操作数据只需要一次。
        * binder的映射空间：
            * 首先 Binder 驱动在内核空间创建一个数据接收缓存区。
@@ -402,6 +411,7 @@ mHandlerThread .start();
        * 当client调用代理对象的时候，返回binder驱动，binder驱动就会去调用server的方法，将结果返回给manage再返回给client。
        * 整个的调用过程是一个同步过程，在Server处理的时候，Client会Block住。因此Client调用过程不应在主线程。
      * 对于server端来说，binder是本地对象。对于client来说，binder是代理对象
+     * 跨进程传达大内存数据：binder 肯定是不行的，因为映射的最大内存只有 1M-8K，可以采用 binder + 匿名共享内存的形式
    * binder例子
      * ALDL
        * asInterface：如果AB在同一个进程就不会跨进程，如果不是就会返回proxy代理类的对象，通过这个对象来获取数据
@@ -605,11 +615,14 @@ mHandlerThread .start();
 90. SharePreference
   * 轻量级存储，创建的时候会把整个文件加载进内存
 
-91. 安卓进程保活
+91. 安卓进程保活、保证一个后台服务不被杀死
   * 提升进程的优先级，降低进程被杀死的概率
-    * 监控手机锁屏事件，在屏幕锁屏时启动一个像素的Activity，在用户解锁时将Activity销毁掉，前台Activity可以将进程变成前台进程，优先级升级到最高。
+    * 监控手机锁屏事件，在屏幕锁屏时启动一个像素的Activity，在用户解锁时将Activity销毁掉，前台Activity可以将进程变成前台进程，优先级升级到最高。—— 使用”1像素“的Activity覆盖在getWindow()的view上。
+    * 以使用startForeground 将service放到前台状态。这样在低内存时被kill的几率会低一些。
+    * 常驻通知栏（可通过启动另外一个服务关闭Notification，不对oom_adj值有影响）。
   * 拉活已经被杀死的进程
-    * 利用广播拉活Activity
+    * 利用广播拉活Activity/service
+      * service + broadcast 方式，就是当service走onDestory的时候，发送一个自定义的广播，当收到广播的时候，重新启动service。
 
 92. 动画
   * view动画——只是影像变化，view的实际位置还在原来地方
@@ -628,6 +641,7 @@ mHandlerThread .start();
     * 计算动画完成比
     * 计算插值，动画变化率
     * 计算运动中的属性值
+  * 动画是改变的显示，如果要响应事件需要真正的移动view
 93. activity的startActivity和context的startActivity区别？
   * 从Activity中启动新的Activity时可以直接mContext.startActivity(intent)就好
   * 如果从其他Context中启动Activity则必须给intent设置Flag,来设定Activity的启动模式
@@ -660,4 +674,25 @@ private int getParents(ViewParents view){
 ```
 98. 跨进程通信
   * 开启多进程：在AndroidManifest中给四大组件指定属性android:process开启多进程模式，在内存允许的条件下可以开启N个进程。
-  * 
+
+99. EventBus —— 事件总线
+  * 基于观察者模式
+  * 与广播相比，广播更耗时，总线能够将信息传递给原生以外的各种对象
+  * 注册后要进行取消注册，因为register是强引用，它会让对象无法得到内存回收，导致内存泄露。所以必须在unregister方法中释放对象所占的内存。
+  * 粘性事件：不用像普通事件先注册、发送事件后才能收到。粘性事件在发送事件之后再订阅该事件也能收到。并且，粘性事件会保存在内存中，每次进入都会去内存中查找获取最新的粘性事件，除非你手动解除注册。
+  * EventBus最核心的逻辑就是利用了 subscriptionsByEventType 这个重要的列表，将订阅对象，即接收事件的方法存储在这个列表，发布事件的时候在列表中查询出相对应的方法并执行。
+100. 低版本SDK如何实现高版本api？
+  * 在使用了高版本API的方法前面加一个 @TargetApi(API号)。
+  * 在代码上用版本判断来控制不同版本使用不同的代码。build.version
+101. 如果在当前线程内使用Handler postdelayed 两个消息，一个延迟5s，一个延迟10s，然后使当前线程sleep 5秒，以上消息的执行时间会如何变化？
+  * 照常执行。sleep时间<=5 对两个消息无影响，5< sleep时间 <=10 对第一个消息有影响，第一个消息会延迟到sleep后执行，sleep时间>10 对两个时间都有影响，都会延迟到sleep后执行。
+102. SurfaceView和View的最本质的区别？
+  * SurfaceView是在一个新起的单独线程中可以重新绘制画面，而view必须在UI的主线程中更新画面。
+  * 在UI的主线程中更新画面可能会引发问题，比如你更新的时间过长，那么你的主UI线程就会被你正在画的函数阻塞。那么将无法响应按键、触屏等消息。当使用SurfaceView由于是在新的线程中更新画面所以不会阻塞你的UI主线程。但这也带来了另外一个问题，就是事件同步。比如你触屏了一下，你需要在SurfaceView中的thread处理，一般就需要有一个event queue的设计来保存touchevent，这会稍稍复杂一点，因为涉及到线程安全。
+  * SurfaceView：使用双缓冲机制，有自己的 surface，在一个独立的线程里绘制，Android7.0之前不能平移、缩放
+  * 前面的SurfaceView的工作方式是创建一个置于应用窗口之后的新窗口，脱离了Android的普通窗口，因此无法对其应用变换操作(平移、缩放、旋转等)，而TextureView则解决了此问题，
+103. Kotlin 特性，和 Java 相比有什么不同的地方?
+  * 能直接与Java相互调用，能与Java工程共存
+  * 支持协程
+  * 支持高阶函数
+  * 语言层面解决空指针问题
