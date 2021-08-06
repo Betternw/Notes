@@ -16,6 +16,9 @@
    * 不同的组件发生ANR的时间不一样，Activity是5秒，BroadCastReceiver是10秒，Service是20秒（均为前台）
    * 主线程中存在耗时的计算、BroadcastReceiver未在10秒内完成相关的处理、Service在特定的时间内无法处理完成 20秒
    * 将所有耗时操作，比如访问网络，Socket通信，查询大 量SQL 语句，复杂逻辑计算等都放在子线程中去，使用AsyncTask、handler.Activity的onCreate和onResume回调中尽量避免耗时的代码。 BroadcastReceiver中onReceive代码也要尽量减少耗时，建议使用IntentService处理。sendMessage等方式更新UI
+   * 运行在主线程里的任何方法都尽可能少做事情。特别是，Activity应该在它的关键生命周期方法 （如onCreate()和onResume()）里尽可能少的去做创建操作。
+   * 应用程序应该避免在BroadcastReceiver里做耗时的操作或计算。但不再是在子线程里做这些任务（因为 BroadcastReceiver的生命周期短），替代的是，如果响应Intent广播需要执行一个耗时的动作的话，应用程序应该启动一个 Service。
+
 
 #### <span id = "2"> Activity和Fragment生命周期有哪些？</span>
 2. Activity和Fragment生命周期有哪些？https://camo.githubusercontent.com/85eb508cd8e5d6077f3a9f0fe9e513182e2d8474/68747470733a2f2f75706c6f61642d696d616765732e6a69616e7368752e696f2f75706c6f61645f696d616765732f323839333133372d643633353337373033313933613664312e706e673f696d6167654d6f6772322f6175746f2d6f7269656e742f
@@ -285,13 +288,14 @@ mHandlerThread .start();
 58. handler——发送处理消息
    * 子线程的操作通过handler传递给主线程；
    * Handler在子线程中怎么发送消息，子线程怎么创建Handler
-     * 拿到主线程的Looper或者通过手动调用Looper.prepare和Looper.loop，
+     * 拿到主线程的Looper——Looper.getMainLooper()或者通过手动调用Looper.prepare和Looper.loop，直接获取当前子线程的looper
      * HandlerThread：它不需要我们去拿主线程的Looper，也不用手动调用Looper.prepare和Looper.loop，它已经封装了Looper，
    * 使用方法：post（runnable）、sendmessage（message）；
       * message：消息。
       * MessageQueue：消息队列，负责消息的存储与管理，负责管理由 Handler 发送过来的 Message。读取会自动删除消息，单链表维护，在其next()方法中会无限循环，不断判断是否有消息，有就返回这条消息并移除。
-      * Looper：消息循环器，负责关联线程以及消息的分发，在该线程下从 MessageQueue获取 Message，分发给Handler
+      * Looper：消息循环器，负责关联线程以及消息的分发，在该线程下从 MessageQueue获取 Message，分发给Handler。线程的转换由Looper完成，handleMessage() 所在线程由 Looper.loop() 调用者所在线程决定。
       * Looper创建的时候会创建一个 MessageQueue（单链表），调用loop()方法的时候消息循环开始，其中会不断调用messageQueue的next()方法，当有消息就处理，否则阻塞在messageQueue的next()方法中。当Looper的quit()被调用的时候会调用messageQueue的quit()，此时next()会返回null，然后loop()方法也就跟着退出。
+      * post的调用，使用方式更加简单，可以将整段代码post掉。最终都是调用sendMessageAtTime方法。 
       * 过程
         * 主线程创建handler，复写handlemessage方法
         * 子线程通过message属性调用handlermeaasge方法，将子线程中消息传到主线程
@@ -427,7 +431,7 @@ mHandlerThread .start();
 70. Fragment
    * 为什么被称为第五大组件？
      * fragment比activity更节省内存，并且UI的切换更加舒适，使用replace等方法进行切换fragment，不会有很明显的效果，但是activity的切换会有明显的翻页效果。
-   * 传值
+   * 参数传递、传值
      * Activity向Fragment传值——bundle
        * 将要传的值放入bundle对象中
        * 在activity中创建fragment对象，使用fragment.setArgument（）方法，将bundle传递到fragment中。
@@ -469,6 +473,11 @@ mHandlerThread .start();
    * FragmentPagerAdapter与FragmentStatePagerAdapter的区别：
      * FragmentPagerAdapter：页面较少。因为在destroyitem的时候不会回收内存，只是将Fragment和UI进行分离
      * FragmentStatePagerAdapter：页面较多，在destroyitem的时候会回收内存
+   * 生命周期执行：
+     * 锁屏，分别执行onPause()、onStop()方法。
+     * 亮屏，分别执行onstart()、onResume()方法。
+     * 覆盖，切换到其他Fragment，分别执行onPause()、onStop()、onDestroyView()方法。
+     * 从其他Fragment回到之前Fragment，分别执行onCreateView()、onActivityCreated()、onstart()、onResume()方法。
 71. 广播
   * 使用intent包装数据
   * 本地广播使用handler实现
@@ -483,6 +492,10 @@ mHandlerThread .start();
     * AMS查找符合相应（IntentFilter）条件的BroadcastReceiver（寻找依据：IntentFilter / Permission），将广播发送到相应的BroadcastReceiver（一般是Activity）的相应的消息循环队列中（sendBroadcast(intent)）
     * 消息循环执行拿到此广播，回调BroadcastReceiver中的onReceive方法
     * 广播发送者 和 广播接收者的执行 是 异步的，发出去的广播不会关心有无接收者接收，也不确定接收者到底是何时才能接收到；
+  * 应用程序应该避免在BroadcastReceiver里做耗时的操作或计算。但不再是在子线程里做这些任务（因为 BroadcastReceiver的生命周期短）
+    * BroadcastReceiver的生命周期短原因：BroadCastReceiver的生命周期：接收到广播→onReceive()→结束。如果必须执行耗时任务可以考虑，在onReceive中开启服务来执行，但不要使用线程，因为BroadCastReceiver的生命周期很短，可能出现子线程还没有结束，BroadCastReceiver就已经退出了。如果当BroadCastReceiver所在的进程结束，虽然该进程中可能有用户启动的新线程，但是由于该进程内没有活动的组件，系统会在内存紧张的时候，优先结束掉该进程，这就会导致BroadCastReceiver启动的子线程不能执行完。
+    * 在子线程还没有结束的情况下，Activity已经被用户退出了，或者BroadcastReceiver已经结束了。在Activity已经退出、BroadcastReceiver已经结束的情况下，此时它们所在的进程就变成了空进程(没有任何活动组件的进程)，
+    * 解决：onReceive()里开始一个Service，让这个Service去 做这件事情，那么系统就会认为这个进程里还有活动正在进行。推荐使用IntentService。
 72. IntentService
   * 继承自service的一个抽象类
   * 内部通过HandlerThread和Handler来实现异步操作。
@@ -696,3 +709,35 @@ private int getParents(ViewParents view){
   * 支持协程
   * 支持高阶函数
   * 语言层面解决空指针问题
+104. Handler内存泄露的引用链
+  * handler中有一个obj对象
+  * message持有handler的引用
+  * hansler持有activity的引用
+  * 当message有没有被处理的时候，根据这条引用链就知道，会发生Activity的内存泄露
+105. 启动一个程序，可以主界面点击图标进入，也可以从一个程序中跳转过去，二者有什么区别？
+  * 通过主界面进入，就是设置默认启动的activity
+  * 从另一个跳转，需要通过intent进行跳转
+106. android:gravity与android:layout_gravity的区别
+  * gravity：表示组件内元素的对齐方式
+  * layout_gravity：相对于父类容器，该视图组件的对齐方式
+107. ContentProvider与sqlite有什么不一样的？
+  * ContentProvider会对外隐藏内部实现，只需要关注访问contentProvider的uri即可
+  * contentProvider应用在应用间共享。Sqlite操作本应用程序的数据库。
+  * ContentProiver可以对本地文件进行增删改查操作
+188. Service 和 Activity 在同一个线程吗
+  * 默认情况下service与activity在同一个线程，都在main Thread，或者ui线程中。
+  * 如果在清单文件中指定service的process属性，那么service就在另一个进程中运行。
+189. service弹出toast
+  * Toast必须在UI主线程上才能正常显示，而在Service中是无法获得Acivity的Context的，
+  * 在service中想显示出Toast只需将show的消息发送给主线程Looper就可以了，即
+```java
+Handler handler = new Handler(Looper.getMainLooper());
+			handler.post(new Runnable() {
+				public void run() {
+					Toast.makeText(getApplicationContext(), "存Service is runing!",
+							Toast.LENGTH_SHORT).show();
+				}
+			});
+```
+190. 请介绍下 ContentProvider 是如何实现数据共享的
+  * ContentProvider是一个对外提供数据的接口，首先需要实现ContentProvider这个接口，然后重写query，insert，getType，delete，update方法，最后在清单文件定义contentProvider的访问uri
