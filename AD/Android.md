@@ -3629,6 +3629,7 @@ instance作为静态对象生命周期比普通的对象包括Activity都要长�
 ### 二 原理
 1. 将数据存表，然后以操作数据库的形式去操作数据。
 2. 底层采用Android中的Binder机制
+3. 实现数据共享操作数据：ContentProvider是一个对外提供数据的接口，首先需要实现ContentProvider这个接口，然后重写query，insert，getType，delete，update方法，最后在清单文件定义contentProvider的访问uri
 
 ### 三 使用
 #### 1. 统一资源标识符（URI）
