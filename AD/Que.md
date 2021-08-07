@@ -69,7 +69,7 @@
     * 注意事项
       * 异步任务的实例必须在UI线程中创建，即AsyncTask对象必须在UI线程中创建——因为要使用handler，以便onProgressUpdate， onPostExecute ， onCancelled 可以正常更新UI。
       * execute(Params... params)方法必须在UI线程中调用。——保证 onPreExecute 正常的更新UI。
-
+      * 因为线程池大小的问题，AsyncTask 只应该用来执行耗时时间较短的任务，比如 HTTP 请求，大规模的下载和数据库的更改不适用于 AsyncTask，因为会导致线程池堵塞，没有线程来执行其他的任务，导致的情形是会发生 AsyncTask 根本执行不了的问题
 
 5. onSaveInstanceState() 与 onRestoreIntanceState()
 * 除了在栈顶的activity，其他的activity都有可能在内存不足的时候被系统回收，一个activity越处于栈底，被回收的可能性就越大。调用 onPause()和 onStop()方法后的 activity 实例仍然存在于内存中，activity 的所有信息和状态数据不会消失，当 activity 重新回到前台之后，所有的改变都会得到保留。当系统内存不足时， 调用onPause()和onStop()方法后的 activity可能会被系统摧毁,，此时内存中就不会存有该 activity 的实例对象了。如果之后这个 activity 重新回到前台，之前所作的改变就会消失。
@@ -332,7 +332,11 @@ mHandlerThread .start();
    * 适配器模式：数据驱动UI，根据数据绘制UI
    * recylerBin：内部类。屏幕可见放在内存中，其余放在recylerBin
    * 优化：convertview重用（通过缓存convertView,这种利用缓存contentView的方式可以判断如果缓存中不存在View才创建View，如果已经存在可以利用缓存中的View）/viewholder（循环利用itemview。第一次加载item后，放入到内存中，下一次再加载的时候直接填充数据，不用再重新加载view。也就是不断地复用，只是更改了数据。）
-60. Activity的启动模式
+   * 当 convertView 为空时，用 setTag()方法为每个 View 绑定一个存放控件的 ViewHolder 对象。当convertView 不为空， 重复利用已经创建的 view 的时候， 使用 getTag()方法获取绑定的 ViewHolder对象，这样就避免了 findViewById 对控件的层层查询，而是快速定位到控件。
+   * 优化：异步加载数据、分页加载数据
+60. ListView 如何定位到指定位置
+  * 可以通过 ListView 提供的 lv.setSelection(listView.getPosition())方法。
+61. Activity的启动模式
    * standard：每次打开一个Activity就创建一个新的实例。应用场景： 绝大多数Activity。
    * singleTop：栈顶有就复用，没有就重新创建一个实例。应用：在通知栏点击收到的通知，然后需要启动一个Activity，这个Activity就可以用singleTop，否则每次点击都会新建一个Activity。
    * singleTask：栈中有就销毁上面的所有Activity，成为新的栈顶。应用：大多数App的主页。在访问了其他页面要回到主页时，此时主页的Activity位于栈顶，要重新回到主页就可以通过这种方式能够保证退出应用时所有的Activity都能报销毁。
@@ -741,3 +745,24 @@ Handler handler = new Handler(Looper.getMainLooper());
 ```
 190. 请介绍下 ContentProvider 是如何实现数据共享的
   * ContentProvider是一个对外提供数据的接口，首先需要实现ContentProvider这个接口，然后重写query，insert，getType，delete，update方法，最后在清单文件定义contentProvider的访问uri
+191. Intent 传递数据时，可以传递哪些类型数据？
+  * 基本数据类型以及对应的数组类型
+  * 可以传递bundle类型，但是bundle类型的数据需要实现Serializable或者parcelable接口
+192. 四大组件的架构模式
+  * Activity负责用户界面， service在后台执行操作，广播监听系统事件，contentprovider存储应用程序数据
+  * Content Provider(模型）- Activity(视图）- Service(控制器） 
+193. Manifest.xml文件中主要包括哪些信息？
+  ```java
+    manifest：根节点，描述了package中所有的内容。
+    uses-permission：请求你的package正常运作所需赋予的安全许可。
+    permission： 声明了安全许可来限制哪些程序能你package中的组件和功能。
+    instrumentation：声明了用来测试此package或其他package指令组件的代码。
+    application：包含package中application级别组件声明的根节点。
+    activity：Activity是用来与用户交互的主要工具。
+    receiver：IntentReceiver能使的application获得数据的改变或者发生的操作，即使它当前不在运行。
+    service：Service是能在后台运行任意时间的组件。
+    provider：ContentProvider是用来管理持久化数据并发布给其他应用程序使用的组件。
+  ```
+194. 子线程发消息到主线程进行更新 UI，除了 handler 和 AsyncTask，还有什么？
+  * 在子线程中通过 runOnUiThread()方法更新 UI：
+  * View.post(Runnable r)方法更新 UI.子线程不能进行UI操作，有一些需要延迟执行的操作，虽然可以通过handler执行但是容易内存泄露，因此View.post() or View.postDelay() 来代替 Handler 使用。
