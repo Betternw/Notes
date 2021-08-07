@@ -37,7 +37,9 @@
       * AsyncTask里面线程池是一个核心线程数为CPU + 1，最大线程数为CPU * 2 + 1，工作队列长度为128的线程池，线程等待队列的最大等待数为28，但是可以自定义线程池。线程池是由AsyncTask来处理的，线程池允许tasks并行运行，需要注意的是并发情况下数据的一致性问题，新数据可能会被老数据覆盖掉。所以希望tasks能够串行运行的话，使用SERIAL_EXECUTOR。
    * 一些问题：
      * 生命周期
-       * 在activity的destroy中调用cancel方法才行，否则会提前崩溃。AsynTask会一直执行，直到doInBackground()方法执行完毕，然后，如果cancel(boolean)被调用,那么onCancelled(Result result)方法会被执行；否则，执行onPostExecute(Result result)方法。如果我们的Activity销毁之前，没有取消AsyncTask，这有可能让我们的应用崩溃(crash)。因为它想要处理的view已经不存在了。所以，我们是必须确保在销毁活动之前取消任务。总之，我们使用AsyncTask需要确保AsyncTask正确的取消。
+       * 在activity的destroy中调用cancel方法才行，否则会提前崩溃。
+       * AsynTask会一直执行，直到doInBackground()方法执行完毕，然后，如果cancel(boolean)被调用,那么onCancelled(Result result)方法会被执行；否则，执行onPostExecute(Result result)方法。
+       * 如果我们的Activity销毁之前，没有取消AsyncTask，这有可能让我们的应用崩溃(crash)。因为它想要处理的view已经不存在了。所以，我们是必须确保在销毁活动之前取消任务。总之，我们使用AsyncTask需要确保AsyncTask正确的取消。
 
      * 内存泄漏
        * 如果AsyncTask被声明为Activity的非静态内部类，那么AsyncTask会保留一个对Activity的引用。如果Activity已经被销毁，AsyncTask的后台线程还在执行，它将继续在内存里保留这个引用，导致Activity无法被回收，引起内存泄漏。
@@ -243,24 +245,25 @@ mHandlerThread .start();
 ```
 45.  通信
     * Android中跨进程通讯的几种方式
-      * Content Provider ——binder
-      * 广播：使用intent携带数据
-        * BroadcastReceiver 是跨应用广播，利用Binder机制实现，
-        * LocalBroadcastReceiver 是应用内广播，利用Handler实现，
-      * ALDL服务
+        * Content Provider ——binder
+        * 广播：使用intent携带数据
+          * BroadcastReceiver 是跨应用广播，利用Binder机制实现，
+          * LocalBroadcastReceiver 是应用内广播，利用Handler实现，
+        * ALDL服务
     * Activity跳转：使用intent和bundle
-       * 显示intent：Intent intent = new Intent(MainActivity.this,SecondActivity.class);startActivity(intent);
-       * 隐式intent
-         * 在manifests.xml配置文件中给SecondActivity设置<intent-filter>,绑定action，命名为“android.intent.action.MY_ACTION”
-         *  intent.setAction("com.android.activity.MY_ACTION");  startActivity(intent);
+         * 显示intent：Intent intent = new Intent(MainActivity.this,SecondActivity.class);startActivity(intent);
+         * 隐式intent
+           * 在manifests.xml配置文件中给SecondActivity设置<intent-filter>,绑定action，命名为“android.intent.action.MY_ACTION”
+           *  intent.setAction("com.android.activity.MY_ACTION");  startActivity(intent);
     * Activity之间通信：intent、bundle、eventbus、广播、接口回调、
     * Activity与Fragment进行通信：Bundle（在activity中建一个bundle，把要传的值存入bundle，然后通过fragment的setArguments（bundle）传到fragment，在fragment中，用getArguments接收。）、广播、Handler
     * Fragment通信
-       * 在fragment中调用activity的方法：getActivity
-       * 在Activity中调用Fragment的方法：接口回调
-       * 在Fragment中调用Fragment的方法：findFragmentByID
+         * 在fragment中调用activity的方法：getActivity
+         * 在Activity中调用Fragment的方法：接口回调
+         * 在Fragment中调用Fragment的方法：findFragmentByID
     * 跨进程调用自定义Service有两种方式：Messager和AIDL。要让两个不同的进程之间进行函数调用，就要使用进程间通信IPC，这两种方式都使用了IPC技术。在安卓系统当中，它实际上是由Binder来实现的。
-       * ALDL：定义一个文件，将service要提供给其他进程使用的接口函数定义在里面。创建一个service类，实现刚才类定义的binder。另一个应用创建serviceconnection，绑定servicec后得到返回的binder。
+         * ALDL：定义一个文件，将service要提供给其他进程使用的接口函数定义在里面。创建一个service类，实现刚才类定义的binder。另一个应用创建serviceconnection，绑定servicec后得到返回的binder。
+    * 四大组件之间通过Intent互相跳转，Android实现IPC的方式是binder机制。
 46.  显示Intent与隐式Intent的区别
 * 明确指出了目标组件名称的Intent，我们称之为“显式Intent” 没有明确指出目标组件名称的Intent，则称之为“隐式 Intent”。
 47. Kotlin 特性，和 Java 相比有什么不同的地方?
@@ -766,3 +769,9 @@ Handler handler = new Handler(Looper.getMainLooper());
 194. 子线程发消息到主线程进行更新 UI，除了 handler 和 AsyncTask，还有什么？
   * 在子线程中通过 runOnUiThread()方法更新 UI：
   * View.post(Runnable r)方法更新 UI.子线程不能进行UI操作，有一些需要延迟执行的操作，虽然可以通过handler执行但是容易内存泄露，因此View.post() or View.postDelay() 来代替 Handler 使用。
+195. 服务与线程
+  * 服务不是线程，可以在线程中工作
+  * 在应用中，如果是长时间的在后台运行，而且不需要交互的情况下，使用服务
+  * 同样是在后台运行，不需要交互的情况下，如果只是完成某个任务，之后就不需要运行，而且可能是多个任务，需要长时间运行的情况下使用线程
+  * 如果任务占用CPU时间多，资源大的情况下，要使用线程
+  * Thread的运行是独立于Activity的，也就是说当一个Activity被finish之后，如果你没有主动停止Thread或者Thread里的run方法没有执行完毕的话，Thread就会一直执行。
