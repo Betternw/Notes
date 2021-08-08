@@ -101,7 +101,18 @@ context对象被单例引用持有，当Activity退出时引用还被持有。
 1. java.lang.OutOfMemoryError: Java heap space ------>java堆内存溢出，一般由于内存泄露或者堆的大小设置不当引起。对于内存泄露，需要通过内存监控软件查找程序中的泄露代码，而堆大小可以通过虚拟机参数-Xms,-Xmx等修改。
 2. java.lang.OutOfMemoryError: PermGen space ------>java永久代溢出，即方法区溢出了，一般出现于大量Class或者jsp页面，或者采用cglib等反射机制的情况，因为上述情况会产生大量的Class信息存储于方法区。此种情况可以通过更改方法区的大小来解决，使用类似-XX:PermSize=64m -XX:MaxPermSize=256m的形式修改。另外，过多的常量尤其是字符串也会导致方法区溢出。
 3. java.lang.StackOverflowError ------> 不会抛OOM error，但也是比较常见的Java内存溢出。JAVA虚拟机栈溢出，一般是由于程序中存在死循环或者深度递归调用造成的，栈大小设置太小也会出现此种溢出。可以通过虚拟机参数-Xss来设置栈的大小。
-
+4. 减少对象的内存占用
+   * 使用更加轻量的数据结构，考虑使用ArrayMap/SparseArray而不是HashMap等传统数据结构。因为HashMap需要一个额外的实例对象来记录Mapping操作。SparseArray更加高效，在于他们避免了对key与value的自动装箱（autoboxing），并且避免了装箱后的解箱。
+   * 避免在Android里面使用Enum
+   * 减小Bitmap对象的内存占用——缩放图片、解码格式不同占用内存不同
+5. 内存对象的重复利用
+    * 复用系统自带的资源
+    * 注意在ListView/GridView等出现大量重复子组件的视图里对ConvertView的复用
+    * 避免在onDraw方法里面执行对象的创建
+      * 类似onDraw等频繁调用的方法，一定需要注意避免在这里做创建对象的操作，因为他会迅速增加内存的使用，而且很容易引起频繁的gc，甚至是内存抖动。
+    * StringBuilder
+      * 在有些时候，代码中会需要使用到大量的字符串拼接的操作，这种时候有必要考虑使用StringBuilder来替代频繁的“+”。
+6.减少内存泄露
 #### 内存回收
 不进行内存回收会造成内存不足：会频繁GC、导致应用缓慢卡顿；会一直杀死进程，影响用户体验。
 #### 五 Handler造成的泄露
@@ -3605,8 +3616,6 @@ instance作为静态对象生命周期比普通的对象包括Activity都要长�
 获取服务(getService)： 客户端想要得到具体的Service直接向ServiceManager要即可。客户端首先向ServiceManager查询得到具体的Service引用，通常是Service引用的代理对象，对数据进行一些处理操作。
 
 使用服务： 通过这个引用向具体的服务端发送请求，服务端执行完成后就返回。
-
-### AIDL使用
 使用服务:
 1. binder对象的获取
  * Binder对象在服务端和客户端是共享的，是同一个Binder对象。客户端通过binder对象获取实现了interface接口的对象来调用远程服务，然后通过binder来实现参数传递
@@ -3614,8 +3623,9 @@ instance作为静态对象生命周期比普通的对象包括Activity都要长�
  * 客户端获取binder对象并获取interface接口对象：通过bindService获得binder对象，再通过binder对象获得interface对象（ServiceConnection ）
 2. 调用服务端方法
    * 调用服务端方法时应开启子线程防止UI线程堵塞导致ANR
+### AIDL使用
 #### 1. 简介
-一种接口定义语言，用于生成可以在安卓设备上两个进程之间进程间通信的代码。如果在一个进程中调用另一个进程中对象的操作，可以使用AIDL生成可序列化的参数来完成进程间通信
+一种接口定义语言，用于生成可以在安卓设备上两个进程之间进程间通信的代码。如果在一个进程中（例如Activity）调用另一个进程中（例如Service）对象的操作，可以使用AIDL生成可序列化的参数来完成进程间通信
 
 #### 2. 使用
 1. 服务端首先要创建一个Service来监听客户端的连接请求，
@@ -4069,22 +4079,6 @@ IntentService是Android的一个封装类，继承自Service
 LruCache维护了一个集合，LinkedHashMap。以访问顺序进行排序，当调用put方法时，就会在集合中添加元素并调用trimToSize方法判断缓存是否已经满，如果满了就用LinkedHashMap的迭代器删除队尾元素，即近期最少访问的元素。当调用get()方法访问缓存对象时，就会调用LinkedHashMap的get()方法获得对应集合元素，同时会更新该元素到队头。
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 ### <span id = "41">Window、Activity、DecorView以及ViewRoot之间的关系</span>
 #### 一 职能简介
 #### Activity
@@ -4119,7 +4113,7 @@ LruCache维护了一个集合，LinkedHashMap。以访问顺序进行排序，�
 
 
 #### 四 总结
-Activity就像个控制器，不负责视图部分。Window像个承载器，装着内部视图。DecorView就是个顶层视图，是所有View的最外层布局。ViewRoot像个连接器，负责沟通，通过硬件的感知来通知视图，进行用户之间的交互。
+Activity就像个控制器，不负责视图部分。Window像个承载器窗户，装着内部视图。DecorView就是个顶层视图，是所有View的最外层布局。ViewRoot像个连接器，负责沟通，通过硬件的感知来通知视图，进行用户之间的交互。
 
 ### <span id = "42">View测量布局及绘制原理</span>
 #### 一 view绘制的流程框架
@@ -4244,6 +4238,7 @@ onMeasure()方法：单一View，一般重写此方法，针对wrap_content情�
 onLayout()方法: 单一View，不需要实现该方法。ViewGroup必须实现，该方法是个抽象方法，实现该方法，来对子View进行布局。（先确定group布局再确定子view布局）
 onDraw()方法：无论单一View，或者ViewGroup都需要实现该方法，因其是个空方法。自定义view需要自己在其中进行绘制。
 
+* requestLayout()方法 ：会导致调用measure()过程 和 layout()过程 。 说明：只是对View树重新布局layout过程包括measure()和layout()过程，不会调用draw()过程，但不会重新绘制 任何视图包括该调用者本身。
 
 ### <span id = "43">Android虚拟机及编译过程</span>
 ### 一 什么是Dalvik虚拟机
