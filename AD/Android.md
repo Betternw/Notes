@@ -100,7 +100,7 @@ context对象被单例引用持有，当Activity退出时引用还被持有。
 #### 内存溢出
 1. java.lang.OutOfMemoryError: Java heap space ------>java堆内存溢出，一般由于内存泄露或者堆的大小设置不当引起。对于内存泄露，需要通过内存监控软件查找程序中的泄露代码，而堆大小可以通过虚拟机参数-Xms,-Xmx等修改。
 2. java.lang.OutOfMemoryError: PermGen space ------>java永久代溢出，即方法区溢出了，一般出现于大量Class或者jsp页面，或者采用cglib等反射机制的情况，因为上述情况会产生大量的Class信息存储于方法区。此种情况可以通过更改方法区的大小来解决，使用类似-XX:PermSize=64m -XX:MaxPermSize=256m的形式修改。另外，过多的常量尤其是字符串也会导致方法区溢出。
-3. java.lang.StackOverflowError ------> 不会抛OOM error，但也是比较常见的Java内存溢出。JAVA虚拟机栈溢出，一般是由于程序中存在死循环或者深度递归调用造成的，栈大小设置太小也会出现此种溢出。可以通过虚拟机参数-Xss来设置栈的大小。
+3. java.lang.StackOverflowError ------> 不会抛OOM error，但也是比较常见的Java内存溢出。JAVA虚拟机栈溢出，一般是由于程序中存在死循环或者深度递归调用造成的，比如递归没有循环终止条件。栈大小设置太小也会出现此种溢出。可以通过虚拟机参数-Xss来设置栈的大小。
 4. 减少对象的内存占用
    * 使用更加轻量的数据结构，考虑使用ArrayMap/SparseArray而不是HashMap等传统数据结构。因为HashMap需要一个额外的实例对象来记录Mapping操作。SparseArray更加高效，在于他们避免了对key与value的自动装箱（autoboxing），并且避免了装箱后的解箱。
    * 避免在Android里面使用Enum
