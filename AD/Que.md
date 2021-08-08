@@ -291,7 +291,8 @@ mHandlerThread .start();
 58. handler——发送处理消息
    * 子线程的操作通过handler传递给主线程；
    * Handler在子线程中怎么发送消息，子线程怎么创建Handler
-     * 拿到主线程的Looper——Looper.getMainLooper()或者通过手动调用Looper.prepare和Looper.loop，直接获取当前子线程的looper
+     * 拿到主线程的Looper——Looper.getMainLooper()或者通过手动调用Looper.prepare和Looper.loop，直接获取当前子线程的looper，然后创建handler，就不会报错。
+     * 将looper绑定到子线程中，并且创建一个handler，在另一个线程通过这个handler发送消息。
      * HandlerThread：它不需要我们去拿主线程的Looper，也不用手动调用Looper.prepare和Looper.loop，它已经封装了Looper，
    * 使用方法：post（runnable）、sendmessage（message）；
       * message：消息。
@@ -636,13 +637,15 @@ mHandlerThread .start();
   * 轻量级存储，创建的时候会把整个文件加载进内存
 
 91. 安卓进程保活、保证一个后台服务不被杀死
-  * 提升进程的优先级，降低进程被杀死的概率
+  * 提升后台进程的优先级，降低进程被杀死的概率
     * 监控手机锁屏事件，在屏幕锁屏时启动一个像素的Activity，在用户解锁时将Activity销毁掉，前台Activity可以将进程变成前台进程，优先级升级到最高。—— 使用”1像素“的Activity覆盖在getWindow()的view上。
     * 以使用startForeground 将service放到前台状态。这样在低内存时被kill的几率会低一些。
     * 常驻通知栏（可通过启动另外一个服务关闭Notification，不对oom_adj值有影响）。
   * 拉活已经被杀死的进程
     * 利用广播拉活Activity/service
       * service + broadcast 方式，就是当service走onDestory的时候，发送一个自定义的广播，当收到广播的时候，重新启动service。
+  * 提高服务优先级
+    * 在AndroidManifest.xml文件中对于intent-filter可以通过android:priority = "1000"这个属性设置最高优先级，1000是最高值，如果数字越小则优先级越低，同时适用于广播。
 
 92. 动画
   * view动画——只是影像变化，view的实际位置还在原来地方
