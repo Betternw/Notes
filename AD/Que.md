@@ -285,7 +285,7 @@ mHandlerThread .start();
   * start_sticky:service进程被kill掉，保留开始状态不保留intent数据。系统调用onStartCommand重新开始service，如果没有命令传入那么intent是null。默认情况
   * start_not_sticky:如果被kill掉，系统不会自动重启。
   * start_redeliver_intent:重启intent。如果服务被kill，会自动重启并传入intent
-  * start_sticky_compatibility:第一种的兼容版本， 不保证服务被kill后一定能重启
+  * start_sticky_compatibility:第一种的兼容版本， 不保证服务被kill后一定能重启 
 57. 为啥不在Activity中开启子线程，而是在Service中开启子线程？
   * 因为在Activity中开启子线程，当Activity被销毁了，子线程是无法控制的，但是如果在Service中开启子线程，就无需担心这些，完全不用担心对子线程的控制，因为子线程都在Service中。
 58. handler——发送处理消息
