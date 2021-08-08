@@ -295,9 +295,13 @@ mHandlerThread .start();
      * 将looper绑定到子线程中，并且创建一个handler，在另一个线程通过这个handler发送消息。
      * HandlerThread：它不需要我们去拿主线程的Looper，也不用手动调用Looper.prepare和Looper.loop，它已经封装了Looper，
    * 使用方法：post（runnable）、sendmessage（message）；
-      * message：消息。
+      * Message：消息。两个成员变量，target 和 callback
+          * target 其实就是发送消息的 Handler 对象
+          * callback 是当调用 handler.post(runnable) 时传入的 Runnable 类型的任务。post 事件的本质也是创建了一个 Message，将我们传入的这个 runnable 赋值给创建的Message的 callback 这个成员变量。
       * MessageQueue：消息队列，负责消息的存储与管理，负责管理由 Handler 发送过来的 Message。读取会自动删除消息，单链表维护，在其next()方法中会无限循环，不断判断是否有消息，有就返回这条消息并移除。
       * Looper：消息循环器，负责关联线程以及消息的分发，在该线程下从 MessageQueue获取 Message，分发给Handler。线程的转换由Looper完成，handleMessage() 所在线程由 Looper.loop() 调用者所在线程决定。
+          *  Looper.prepare() 创建 Looper
+          *  Looper.loop()开启轮询
       * Looper创建的时候会创建一个 MessageQueue（单链表），调用loop()方法的时候消息循环开始，其中会不断调用messageQueue的next()方法，当有消息就处理，否则阻塞在messageQueue的next()方法中。当Looper的quit()被调用的时候会调用messageQueue的quit()，此时next()会返回null，然后loop()方法也就跟着退出。
       * post的调用，使用方式更加简单，可以将整段代码post掉。最终都是调用sendMessageAtTime方法。 
       * 过程
@@ -778,3 +782,12 @@ Handler handler = new Handler(Looper.getMainLooper());
   * 同样是在后台运行，不需要交互的情况下，如果只是完成某个任务，之后就不需要运行，而且可能是多个任务，需要长时间运行的情况下使用线程
   * 如果任务占用CPU时间多，资源大的情况下，要使用线程
   * Thread的运行是独立于Activity的，也就是说当一个Activity被finish之后，如果你没有主动停止Thread或者Thread里的run方法没有执行完毕的话，Thread就会一直执行。
+
+196. 设计一个图片的异步加载框架
+  * 肯定要用到图片加载的三级缓存的思想。三级缓存分为内存缓存、本地缓存和网络缓存。
+  * 内存缓存：将Bitmap缓存到内存中，运行速度快，但是内存容量小。 
+  * 本地缓存：将图片缓存到文件中，速度较慢，但容量较大。 
+  * 网络缓存：从网络获取图片，速度受网络影响。
+  * 拿到图片url后首先从内存中查找BItmap，如果找到直接加载。
+  * 内存中没有找到，会从本地缓存中查找，如果本地缓存可以找到，则直接加载。
+  * 内存和本地都没有找到，这时会从网络下载图片，下载到后会加载图片，并且将下载到的图片放到内存缓存和本地缓存中。
