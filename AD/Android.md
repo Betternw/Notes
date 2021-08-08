@@ -65,16 +65,25 @@ ListView/RecycleView的优化：
 2. 异步加载：耗时的操作放在异步线程中
 
 bitmap优化:
-对图片进行压缩
+1. 对图片进行压缩
+2. 减少像素所占内存。Options 中有一个属性 inPreferredConfig，默认是 ARGB_8888，代表每个像素所占尺寸。我们可以通过将之修改为 RGB_565 或者 ARGB_4444 来减少一半内存。
+3. 大图加载：局部加载。
 
 ### 五 线程优化
 1. 采用线程池，重用其中的线程
 
-### 六
+### 六 内存优化
 1. 节制的使用Service，当启动一个Service时，系统总是倾向于保留这个Service依赖的进程，这样会造成系统资源的浪费，可以使用IntentService，执行完成任务后会自动停止。
 2. 当界面不可见时释放内存，可以重写Activity的onTrimMemory()方法，然后监听TRIM_MEMORY_UI_HIDDEN这个级别，这个级别说明用户离开了页面，可以考虑释放内存和资源。
 3. 避免在Bitmap浪费过多的内存，使用压缩过的图片，也可以使用Fresco等库来优化对Bitmap显示的管理。
 4. 使用优化过的数据集合SparseArray代替HashMap，HashMap为每个键值都提供一个对象入口，使用SparseArray可以免去基本对象类型转换为引用数据类想的时间。
+
+
+### 七 网路优化
+1. 避免 DNS 解析，根据域名查询可能会耗费上百毫秒的时间，也可能存在DNS劫持的风险。可以根据业务需求采用增加动态更新 IP 的方式，或者在 IP 方式访问失败时切换到域名访问方式。
+2. 大量数据的加载采用分页的方式
+3. 加入网络数据的缓存，避免频繁请求网络
+4. 上传图片时，在必要的时候压缩图片
 
 ## <span id = "2">内存泄露汇总</span>
 内存泄露是指程序中已动态分配的堆内存由于某种原因程序未释放或无法释放，造成系统内存的浪费。而当可用内存变少时，程序当申请内存时，没有足够的控件供其使用，就会出现OOM内存溢出。
@@ -1615,6 +1624,7 @@ main_tab_icon_home.xml:
 2. 调用onTouchEvent()处理事件（DOWN事件将不再往上传递给A的onTouchEvent()）
 3. 该事件列的其他事件（Move、Up）将直接传递给B的onTouchEvent()
 4. 该事件列的其他事件（Move、Up）将不会再传递给B的onInterceptTouchEvent方法，该方法一旦返回一次true，就再也不会被调用了。
+5. 例子：在一个 Recyclerview 钟有很多的 Button，我们首先按下了一个 button，然后滑动一段距离再松开，这时候 Recyclerview 会跟着滑动，并不会触发这个 button 的点击事件。这个例子中，当我们按下 button 时，这个 button 接收到了 Action_Down 事件，正常情况下后续的事件序列应该由这个 button处理。但我们滑动了一段距离，这时  Recyclerview 察觉到这是一个滑动操作，拦截了这个事件序列，走了自身的 onTouchEvent()方法，反映在屏幕上就是列表的滑动。而这时 button 仍然处于按下的状态，所以在拦截的时候需要发送一个 Action_Cancel 来通知 button 恢复之前状态。
 
 #### 4. 拦截Down的后续事件
 1. 假设ViewGroup B没有拦截DOWN事件（还是View C来处理DOWN事件），但它拦截了接下来的MOVE事件。DOWN事件传递到C的onTouchEvent方法，返回了true。
@@ -1634,7 +1644,7 @@ main_tab_icon_home.xml:
 1. 当一个点击事件发生时，事件最先传到Activity的dispatchTouchEvent()进行事件分发
 2. 调用Window类实现类PhoneWindow的superDispatchTouchEvent()
 3. 调用DecorView的superDispatchTouchEvent()
-4. 最终调用DecorView父类的dispatchTouchEvent()，即ViewGroup的dispatchTouchEvent()
+4. 最终调用DecorView父类的dispatchTouchEvent()，DecorView 是一个 FrameLayout 的子类，FrameLayout 是一个 ViewGroup 的子类，即ViewGroup的dispatchTouchEvent()
 5. 这样事件就从 Activity 传递到了 ViewGroup
 
 #### 2. ViewGroup事件的分发机制
@@ -3333,6 +3343,43 @@ instance作为静态对象生命周期比普通的对象包括Activity都要长�
       * Async
          * 发布在某一线程，订阅回调运行在新开的线程中。
 5. Sticky——粘性事件 发布时将事件缓存起来，实现先发布再订阅
+6. register：
+    * 获取订阅者的 Class 对象
+    * 使用反射查找订阅者中的事件处理方法集合
+    * 遍历事件处理方法集合，调用 subscribe(subscriber，subscriberMethod) 方法，在 subscribe 方法内：
+        * 通过 subscriberMethod 获取处理的事件类型 eventType
+        * 将订阅者 subscriber 和方法 subscriberMethod 绑在一起形成一个 Subscription 对象
+        * 通过 subscriptionsByEventType.get(eventType) 获取 Subscription 集合
+            * 如果 Subscription 集合为空则创建一个新的集合，这一步目的是延迟集合的初始化
+            * 拿到 Subscription 集合后遍历这个集合，通过比较事件处理的优先级，将新的 Subscription 对象加入合适的位置
+        * 通过typesBySubscriber.get(subscriber)获取事件类型集合
+            * 如果事件类型集合为空则创建一个新的集合，这一步目的是延迟集合的初始化
+            * 拿到事件类型集合后将新的事件类型加入到集合中
+        * 判断当前事件类型是否是 sticky
+        * 如果当前事件类型不是 sticky（粘性事件），subscribe(subscriber，subscriberMethod)到此终结
+        * 如果是 sticky，判断 EventBus 中的一个事件继承性的属性，默认是 true
+            * 如果事件继承性为 true，遍历这个 Map 类型的 stickEvents，通过 isAssignableFrom 方法判断当前事件是否是遍历事件的父类，如果是则发送事件
+            * 如果事件继承性为 false，通过 stickyEvents.get(eventType)获取事件并发送
+7. post:
+    * postSticky
+        * 将事件加入到 stickyEvents 这个 Map 类型的集合中
+        * 调用 post 方法
+    * post
+        * 将事件加入当前线程的事件队列中
+        * 通过 while 循环不断从事件队列中取出事件并调用 postSingleEvent 方法发送事件
+        * 在 postSingleEvent 中，判断事件继承性，默认为true
+            * 事件继承性为true，找到当前事件所有的父类型并调用 postSingleEventForEventType 方法发送事件
+            * 事件继承性为 false，只发送当前事件类型的事件
+                * 在 postSingleEventForEventType 中，通过 subscriptionsByEventType.get(eventClass) 获取 Subscription 类型集合
+                * 遍历这个集合，调用 postToSubscription 发送事件
+                    * 在 postToSubscription 中分为四种情况
+                        * POSTING，调用 invokeSubscriber(subscription, event) 处理事件，本质是 method.invoke() 反射
+                        * MAIN，如果在主线程直接 invokeSubscriber 处理；反之通过 handler 切换到主线程调用 invokeSubscriber 处理事件
+                        * BACKGROUND，如果不在主线程直接 invokeSubscriber 处理事件；反之开启一条线程，在线程中调用 invokeSubscriber 处理事件
+                        * ASYNC，开启一条线程，在线程中调用 invokeSubscriber 处理事件
+8. ungister:
+    * 删除 subscriptionsByEventType 中与订阅者相关的所有 subscription
+    * 删除 typesBySubscriber 中与订阅者相关的所有类型
 ###  <span id = "27">RecyclerView</span>
 1. 有限的窗口展示大量的数据
 2. 灵活可配置、可自定义和重复利用的item、高度解耦的控件。
