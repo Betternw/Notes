@@ -150,6 +150,8 @@
     * HashMap底层使用Hash表实现，通过元素的hashCode值和equals()方法保证元素唯一性；
     * TreeSet底层使用红黑树实现，通过comparable或comparator接口保证元素唯一性；
     * HashSet底层是基于HashMap实现的，基本都是调用hashmap的方法。
+    * hashmap存储的是键值对，hashset存储的对象
+    * 二者继承的接口也不同
 * TreeMap/红黑树
     * TreeMap存储键值对，底层是红黑树，可以实现元素的自动排序。了解 TreeMap 必须理解红黑树！
     * 红黑树是一种二叉搜索树，也是均衡二叉树，当不满足红黑树规则时，自动调整节点平衡。
