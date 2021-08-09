@@ -1,7 +1,7 @@
  * #### [什么是ANR 如何避免它？](#1)
  * #### [Activity和Fragment生命周期有哪些](#2)
  * #### [binder和bundle](#3)
- * #### [什么是ANR 如何避免它？](#1)
+ * #### [通信](#45)
  * #### [什么是ANR 如何避免它？](#1)
  * #### [什么是ANR 如何避免它？](#1)
  * #### [什么是ANR 如何避免它？](#1)
@@ -243,6 +243,7 @@ mHandlerThread .start();
      mHandler.sendMessage(message);
     mHandlerThread.quit()；
 ```
+#### <span id = "45"> 通信</span>
 45.  通信
     * Android中跨进程通讯的几种方式
         * Content Provider ——binder
