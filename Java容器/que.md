@@ -144,7 +144,7 @@
 * LinkedHashMap和LinkedHashSet
     * LinkedHashMap能记录元素的插入顺序和访问顺序。
     * 内部通过双向链表，保证元素的插入顺序。
-    * LinkedHashSet底层使用LinkedHashMap实现。
+    * LinkedHashSet底层使用LinkedHashMap实现。 
     * 二者关系类似HashMap和HashSet。
 * HashSet,HashMap和TreeSet区别
     * HashMap底层使用Hash表实现，通过元素的hashCode值和equals()方法保证元素唯一性；
