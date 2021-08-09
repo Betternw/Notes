@@ -1094,12 +1094,18 @@ public class MainActivity extends AppCompatActivity {
 
 
 ### 五 Fragment与Activity之间的通信
+#### 获得实例：
 * 如果Activity中包含自己管理的Fragment的引用，可以通过引用直接访问所有的Fragment的public方法
 * 如果Activity中未保存任何Fragment的引用，每个Fragment都有一个唯一的TAG或者ID,可以通过getFragmentManager.findFragmentByTag()或者findFragmentById()获得任何Fragment实例，然后进行操作
 * Fragment中可以通过getActivity()得到当前绑定的Activity的实例，然后进行操作。
   * 问题：getActivity()空指针：这种情况一般发生在在异步任务里调用getActivity()，而Fragment已经onDetach()，此时就会有空指针，
   * 解决：是在Fragment里使用一个全局变量mActivity，在onAttach()方法里赋值，这样可能会引起内存泄漏，但是异步任务没有停止的情况下本身就已经可能内存泄漏，相比直接crash，这种方式更好
-
+#### 通信：
+* Activity与Fragment进行通信：Bundle（在activity中建一个bundle，把要传的值存入bundle，然后通过fragment的setArguments（bundle）传到fragment，在fragment中，用getArguments接收。）、广播、Handler
+* Fragment通信
+   * 在fragment中调用activity的方法：getActivity
+   * 在Activity中调用Fragment的方法：接口回调
+   * 在Fragment中调用Fragment的方法：findFragmentByID
 ### 六 Fragment与Activity通信的优化
 1. 最好不要Fragment之间相互操作，Activity担任的是Fragment间类似总线一样的角色，应当由它决定Fragment如何操作
 2. Fragment不能响应Intent打开，但是Activity可以，Activity可以接收Intent，然后根据参数判断显示哪个Fragment。
