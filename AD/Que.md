@@ -256,18 +256,23 @@ mHandlerThread .start();
          * 隐式intent
            * 在manifests.xml配置文件中给SecondActivity设置<intent-filter>,绑定action，命名为“android.intent.action.MY_ACTION”
            *  intent.setAction("com.android.activity.MY_ACTION");  startActivity(intent);
+    
     * Activity之间通信：intent、bundle、eventbus、广播、接口回调、
+    
     * Activity与Fragment进行通信：Bundle（在activity中建一个bundle，把要传的值存入bundle，然后通过fragment的setArguments（bundle）传到fragment，在fragment中，用getArguments接收。）、广播、Handler
+    
     * Fragment通信
-         * 在fragment中调用activity的方法：getActivity
-         * 在Activity中调用Fragment的方法：接口回调
-         * 在Fragment中调用Fragment的方法：findFragmentByID
+       * 在fragment中调用activity的方法：getActivity
+       * 在Activity中调用Fragment的方法：接口回调
+        * 在Fragment中调用Fragment的方法：findFragmentByID
+    
     * 跨进程调用自定义Service有两种方式：Messager和AIDL。要让两个不同的进程之间进行函数调用，就要使用进程间通信IPC，这两种方式都使用了IPC技术。在安卓系统当中，它实际上是由Binder来实现的。
          * ALDL：定义一个文件，将service要提供给其他进程使用的接口函数定义在里面。创建一个service类，实现刚才类定义的binder。另一个应用创建serviceconnection，绑定servicec后得到返回的binder。
+    
     * 四大组件之间通过Intent互相跳转，Android实现IPC的方式是binder机制。
 46.  显示Intent与隐式Intent的区别
 * 明确指出了目标组件名称的Intent，我们称之为“显式Intent” 没有明确指出目标组件名称的Intent，则称之为“隐式 Intent”。
-47. Kotlin 特性，和 Java 相比有什么不同的地方?
+1.  Kotlin 特性，和 Java 相比有什么不同的地方?
    * 能直接与Java相互调用
    * 支持高阶函数
    * 语言层面解决空指针问题
