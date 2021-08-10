@@ -1,10 +1,32 @@
  * #### [什么是ANR 如何避免它？](#1)
  * #### [Activity和Fragment生命周期有哪些](#2)
  * #### [binder和bundle](#3)
+ * #### [Bunder传递对象为什么需要序列化？Serialzable和Parcelable的区别？](#7)
+ * #### [MVP，MVVM，MVC](#36)
  * #### [通信](#45)
- * #### [什么是ANR 如何避免它？](#1)
- * #### [什么是ANR 如何避免它？](#1)
- * #### [什么是ANR 如何避免它？](#1)
+ * #### [handler](#58)
+ * #### [OkHttp](#64)
+ * #### [retrofit](#65)
+ * #### [Fragment](#70)
+ * #### [retrofit](#65)
+ * #### [Apk打包程](#77)
+ * #### [Apk安装流程](#78)
+ * #### [LinearLayout和RelativeLayout性能对比](#79)
+ * #### [Service和Activity之间通信的几种方式](#80)
+ * #### [在ACTIVITY中获取某个view的宽高](#81)
+ * #### [关于屏幕刷新的问题](#84)
+ * #### [安卓系统架构](#87)
+ * #### [为什么bindService可以和Activity生命周期联动](#89)
+ * #### [安卓进程保活、保证一个后台服务不被杀死](#91)
+ * #### [activity的startActivity和context的startActivity区别？](#93)
+ * #### [加速启动Activity](#94)
+ * #### [EventBus —— 事件总线](#99)
+ * #### [Kotlin 特性，和 Java 相比有什么不同的地方?](#103)
+ * #### [启动一个程序，可以主界面点击图标进入，也可以从一个程序中跳转过去，二者有什么区别？](#105)
+ * #### [service弹出toast](#109)
+ * #### [四大组件的架构模式](#112)
+ * #### [子线程发消息到主线程进行更新 UI，除了 handler 和 AsyncTask，还有什么？](#114)
+
 #### <span id = "1"> 什么是ANR 如何避免它？</span>
 1. 什么是ANR 如何避免它？
    * 在Android上，如果你的应用程序有一段时间响应不够灵敏，系统会向用户显示一个对话框，这个对话框称作应 用程序无响应（ANR：Application NotResponding）对话框。
@@ -18,8 +40,6 @@
    * 将所有耗时操作，比如访问网络，Socket通信，查询大 量SQL 语句，复杂逻辑计算等都放在子线程中去，使用AsyncTask、handler.Activity的onCreate和onResume回调中尽量避免耗时的代码。 BroadcastReceiver中onReceive代码也要尽量减少耗时，建议使用IntentService处理。sendMessage等方式更新UI
    * 运行在主线程里的任何方法都尽可能少做事情。特别是，Activity应该在它的关键生命周期方法 （如onCreate()和onResume()）里尽可能少的去做创建操作。
    * 应用程序应该避免在BroadcastReceiver里做耗时的操作或计算。但不再是在子线程里做这些任务（因为 BroadcastReceiver的生命周期短），替代的是，如果响应Intent广播需要执行一个耗时的动作的话，应用程序应该启动一个 Service。
-
-
 #### <span id = "2"> Activity和Fragment生命周期有哪些？</span>
 2. Activity和Fragment生命周期有哪些？https://camo.githubusercontent.com/85eb508cd8e5d6077f3a9f0fe9e513182e2d8474/68747470733a2f2f75706c6f61642d696d616765732e6a69616e7368752e696f2f75706c6f61645f696d616765732f323839333133372d643633353337373033313933613664312e706e673f696d6167654d6f6772322f6175746f2d6f7269656e742f
 3. 横竖屏切换时候Activity的生命周期
@@ -94,6 +114,8 @@
 
     * 空进程：
     不包含任何应用程序的进程，这样的进程系统是一般不会让他存在的
+
+#### <span id = "7"> Bunder传递对象为什么需要序列化？Serialzable和Parcelable的区别？</span>
 7. Bunder传递对象为什么需要序列化？Serialzable和Parcelable的区别？
 * 因为bundle传递数据时只支持基本数据类型，所以在传递对象时需要序列化转换成可存储或可传输的本质状态（字节流）
 * Serializable（Java自带）：序列化，表示将一个对象转换成存储或可传输的状态。序列化后的对象可以在网络上进传输，也可以存储到本地。在硬盘上。
@@ -154,6 +176,7 @@ bind的方式开启服务，绑定服务，调用者挂了，服务也会跟着�
 35.  ThreadLocal的原理
 * ThreadLocal相当于线程内的内存，一个局部变量。每次可以对线程自身的数据读取和操作，并不需要通过缓冲区与 主内存中的变量进行交互。并不会像synchronized那样修改主内存的数据，再将主内存的数据复制到线程内的工作内存。ThreadLocal可以让线程独占资源，存储于线程内部，避免线程堵塞造成CPU吞吐下降。
 * 实现单个线程单例以及单个线程上下文信息存储，比如交易id等。实现线程安全，非线程安全的对象使用ThreadLocal之后就会变得线程安全，因为每个线程都会有一个对应的实例。 承载一些线程相关的数据，避免在方法中来回传递参数。
+#### <span id = "36"> MVP，MVVM，MVC</span>
 36. MVP，MVVM，MVC
 * MVC
    * 视图层(View) 对应于xml布局文件和java代码动态view部分
@@ -294,6 +317,8 @@ mHandlerThread .start();
   * start_sticky_compatibility:第一种的兼容版本， 不保证服务被kill后一定能重启 
 57. 为啥不在Activity中开启子线程，而是在Service中开启子线程？
   * 因为在Activity中开启子线程，当Activity被销毁了，子线程是无法控制的，但是如果在Service中开启子线程，就无需担心这些，完全不用担心对子线程的控制，因为子线程都在Service中。
+
+#### <span id = "58"> handler</span>
 58. handler——发送处理消息
    * 子线程的操作通过handler传递给主线程；
    * Handler在子线程中怎么发送消息，子线程怎么创建Handler
@@ -363,6 +388,7 @@ mHandlerThread .start();
    * ContenrResolver：通过不同的URI操作不同的ContentProvider中的数据
    * 外界进程通过 URI 找到对应的ContentProvider & 其中的数据，再进行数据操作。URI——统一资源标识符
    * ContentProvider主要以表格的形式组织数据
+#### <span id = "64"> OkHttp</span>
 64. OkHttp
      * 关于网络请求的第三方类库，其中封装了网络请求的get、post等操作的底层实现，
      * 创建OkHttpclient对象：http请求的客户端类，client对象作为全局的实例进行保存。只需要这一个实例对象。所有的http请求共用client实例对象的response缓存和线程池。
@@ -373,6 +399,7 @@ mHandlerThread .start();
        * enqueue：client.newCall(request).enqueue(new Callback()。接收callback参数，不会阻塞，开启一个子线程，在子线程中操作。当异步请求成功时，回调onResponse方法，获取okHttp的response对象。当请求失败时，回调onFailture方法。这两个方法都在工作线程当中执行。
          * 首先使用new创建OkHttpClient对象。然后调用OkHttpClient对象的newCall方法生成一个Call对象，该方法接收一个Request对象，Request对象存储的是我们的请求URL和请求参数。最后执行Call对象的enqueue方法，该方法接收一个Callback回调对象，在回调对象的onResponse方法中拿到Response对象，这就是返回的结果。
      * post方法：在生成request方法的时候执行了post方法，get方法没有。因为request的builder时候，默认是get方法，所以需要post时就需要申明post方法。
+#### <span id = "65"> retrofit</span>
 65. retrofit
     * 创建一个接口，作为http请求的api接口。
       * 使用注解的方式描述和配置网络请求参数。实际上是运用动态代理的方式将注解翻译成一个Http请求，然后执行该请求。
@@ -446,6 +473,7 @@ mHandlerThread .start();
        * Activity：onCreat()、onSaveInstanceState()
        * Fragment： setArguments()
        * Message：setData()
+#### <span id = "70"> Fragment</span>
 70. Fragment
    * 为什么被称为第五大组件？
      * fragment比activity更节省内存，并且UI的切换更加舒适，使用replace等方法进行切换fragment，不会有很明显的效果，但是activity的切换会有明显的翻页效果。
@@ -568,12 +596,14 @@ mHandlerThread .start();
   * 单例造成的内存泄露，比如一些需要传入参数是context，如果是Activity的context，由于该 Context 的引用被单例对象所持有，其生命周期等于整个应用程序的生命周期，所以当前 Activity 退出时它的内存并不会被回收，这就造成泄漏了。
   * 非静态内部类创建静态实例造成的内存泄漏
   * Handler 造成的内存泄漏——使用静态内部类 + WeakReference
+#### <span id = "77"> APK打包流程 </span>
 77. APK打包流程
   * Java编译器对工程本身的java代码进行编译，产出为.class文件。
   * class文件和依赖的三方库文件通过dex工具生成Delvik虚拟机可执行的.dex文件，包含了所有的class信息，包括项目自身的class和依赖的class。产出为.dex文件。将所有其他内容转换成已编译资源。
   * apkbuilder工具将.dex文件和编译后的资源文件生成未经签名对齐的apk文件。这里编译后的资源文件包括两部分，一是由aapt编译产生的编译后的资源文件，二是依赖的三方库里的资源文件。产出为未经签名的.apk文件。
   * 分别由Jarsigner和zipalign对apk文件进行签名和对齐，生成最终的apk文件。
   * 总结：编译 ——> DEX ——> 打包 ——> 签名和对齐
+#### <span id = "78"> Apk安装流程 </span>
 78. Apk安装流程
   * 复制APK到/data/app目录下，解压并扫描安装包。
   * 资源管理器解析APK里的资源文件。
@@ -581,21 +611,24 @@ mHandlerThread .start();
   * 然后对dex文件进行优化，并保存在dalvik-cache目录下
   * 将AndroidManifest文件解析出的四大组件信息注册到PackageManagerService中。
   * 安装完成后，发送广播。
+#### <span id = "79"> Apk安装流程 </span>
 79. LinearLayout和RelativeLayout性能对比
   * RelativeLayout会让子View调用2次onMeasure，因为其中的view会存在相互依赖关系，会进行横向和纵向的两次排序测量。LinearLayout 在有weight时，也会调用子View2次onMeasure。第一册测量获取所有子view的高度，第二次将剩余高度根据weight加到weight>0的子View上。
   * RelativeLayout的子View如果高度和RelativeLayout不同，则会引发效率问题，当子View很复杂时，这个问题会更加严重。RelativeLayout的子View如果高度和RelativeLayout不同，会导致RelativeLayout在onMeasure()方法中做横向测量时，纵向的测量结果尚未完成，只好暂时使用自己的高度传入子View系统。而父View给子View传入的值也没有变化就不会做无谓的测量的优化会失效。如果可以，尽量使用padding代替margin
   * DecorView的层级深度已知且固定的，上面一个标题栏，下面一个内容栏，采用RelativeLayout并不会降低层级深度，因此这种情况下使用LinearLayout效率更高。
   * 开发者默认新建RelativeLayout是希望开发者能采用尽量少的View层级，很多效果是需要多层LinearLayout的嵌套，这必然不如一层的RelativeLayout性能更好。
-79. Service和Activity之间通信的几种方式
+#### <span id = "80"> Service和Activity之间通信的几种方式 </span>
+80. Service和Activity之间通信的几种方式
   * 通过Binder对象
   * 通过BroadCast方式
-80. 在ACTIVITY中获取某个view的宽高
+#### <span id = "81"> 在ACTIVITY中获取某个view的宽高 </span>
+81. 在ACTIVITY中获取某个view的宽高
   *  View的measure过程和Activity的生命周期方法不是同步执行的，onCreate()、onResume() 中不可以获取View的宽高，绘制最开始的调用方法是在onResume方法之后的，也就是说view的绘制流程是从onresume后开始的。
   *  解决方法
      * view.Post(runnable)：原本在onCreate中直接进行绘制不行，但是调用view.Post后，会将方法添加到队列尾部，保证了在layout结束以后才执行。
      * ViewTreeObserver#addOnGlobalLayoutListener：当View树的状态发生改变或者View树内部的View的可见性发生改变时，onGlobalLayout方法将被回调，然后在方法中进行view的宽高获取
      *  Activity/View的onWindowFocusChanged：(含义：此时View已经初始化完毕，当Activity的窗口得到焦点和失去焦点时均会被调用一次)，在这个方法中进行view宽高的获取，但是需要注意的是，onWindowFocusChanged会被调用多次，当Activity的窗口得到焦点和失去焦点的时候都会被调用一次。
-81. 事件分发
+82. 事件分发
   * 只有中间的ViewGroup有拦截方法，如果不拦截，就会交给view进行处理。
   * 子View可调用requestDisallowInterceptTouchEvent方法，来设置disallowIntercept=true，从而阻止父ViewGroup的onInterceptTouchEvent拦截操作
   * 如果View没有消费ACTION_DOWN事件，则之后的ACTION_MOVE等事件都不会再接收
@@ -611,6 +644,7 @@ mHandlerThread .start();
       * Dalvik和ART区别
         * ART在第一次安装的时候就将字节码转换为机器码，而Dalvik要通过即时编译器将字节码转换为机器码
         * Art采用并发标记清除方案，启动gc后只有一次暂停。Dalvik采用的标记清除算法，在遍历和标记阶段会造成两次暂停。
+#### <span id = "84"> 关于屏幕刷新的问题 </span>
 84. 关于屏幕刷新的问题
     * 丢帧(掉帧) ，是说 这一帧延迟显示 还是丢弃不再显示 ？
         * 延迟显示，因为缓存交换的时机只能等下一个VSync了。
@@ -636,16 +670,18 @@ mHandlerThread .start();
       * 进程内：文件缓存、磁盘缓存
       * 进程间：通过contentProvider进行数据共享
   * binder大概是1MB大小
+#### <span id = "87"> 安卓系统架构 </span>
 87. 安卓系统架构
   * 从上到下依次为：Android应用框架层、java系统框架层、c++系统框架层、linux内核层
 88. Activity和service通信
   * 通过bindService方式，先在Activity里实现一个ServiceConnection接口，并将该接口传递给bindService()方法，在ServiceConnection接口的onServiceConnected()方法里执行相关操作。
+#### <span id = "89"> 为什么bindService可以和Activity生命周期联动 </span>
 89. 为什么bindService可以和Activity生命周期联动
   * startService：由 ActivityThread 来创建 Service 对象，回调相关的生命周期方法等。
   * bindService：bindService 方法执行时，LoadedApk 会记录 ServiceConnection 信息；Activity 执行 finish 方法时，会通过 LoadedApk 检查 Activity 是否存在未注销/解绑的 BroadcastReceiver 和 ServiceConnection，如果有，那么会通知 AMS 注销/解绑对应的 BroadcastReceiver 和 Service，并打印异常信息，告诉用户应该主动执行注销/解绑的操作
 90. SharePreference
   * 轻量级存储，创建的时候会把整个文件加载进内存
-
+#### <span id = "91"> 安卓进程保活、保证一个后台服务不被杀死 </span>
 91. 安卓进程保活、保证一个后台服务不被杀死
   * 提升后台进程的优先级，降低进程被杀死的概率
     * 监控手机锁屏事件，在屏幕锁屏时启动一个像素的Activity，在用户解锁时将Activity销毁掉，前台Activity可以将进程变成前台进程，优先级升级到最高。—— 使用”1像素“的Activity覆盖在getWindow()的view上。
@@ -675,6 +711,7 @@ mHandlerThread .start();
     * 计算插值，动画变化率
     * 计算运动中的属性值
   * 动画是改变的显示，如果要响应事件需要真正的移动view
+#### <span id = "93"> activity的startActivity和context的startActivity区别？ </span>
 93. activity的startActivity和context的startActivity区别？
   * 从Activity中启动新的Activity时可以直接mContext.startActivity(intent)就好
   * 如果从其他Context中启动Activity则必须给intent设置Flag,来设定Activity的启动模式
@@ -682,6 +719,7 @@ mHandlerThread .start();
 intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK) ; 
 mContext.startActivity(intent);
 ```
+#### <span id = "94"> 加速启动Activity </span>
 94. 加速启动Activity
     * onCreate() 中不执行耗时操作 把页面显示的 View 细分一下，放在 AsyncTask 里逐步显示，用 Handler 更好。这样用户的看到的就是有层次有步骤的一个个的 View 的展示，不会是先看到一个黑屏，然后一下显示所有 View。最好做成动画，效果更自然。
     * 利用多线程的目的就是尽可能的减少 onCreate() 和 onReume() 的时间，使得用户能尽快看到页面，操作页面。
@@ -707,7 +745,7 @@ private int getParents(ViewParents view){
 ```
 98. 跨进程通信
   * 开启多进程：在AndroidManifest中给四大组件指定属性android:process开启多进程模式，在内存允许的条件下可以开启N个进程。
-
+#### <span id = "99"> EventBus —— 事件总线 </span>
 99. EventBus —— 事件总线
   * 基于观察者模式
   * 与广播相比，广播更耗时，总线能够将信息传递给原生以外的各种对象
@@ -724,6 +762,7 @@ private int getParents(ViewParents view){
   * 在UI的主线程中更新画面可能会引发问题，比如你更新的时间过长，那么你的主UI线程就会被你正在画的函数阻塞。那么将无法响应按键、触屏等消息。当使用SurfaceView由于是在新的线程中更新画面所以不会阻塞你的UI主线程。但这也带来了另外一个问题，就是事件同步。比如你触屏了一下，你需要在SurfaceView中的thread处理，一般就需要有一个event queue的设计来保存touchevent，这会稍稍复杂一点，因为涉及到线程安全。
   * SurfaceView：使用双缓冲机制，有自己的 surface，在一个独立的线程里绘制，Android7.0之前不能平移、缩放
   * 前面的SurfaceView的工作方式是创建一个置于应用窗口之后的新窗口，脱离了Android的普通窗口，因此无法对其应用变换操作(平移、缩放、旋转等)，而TextureView则解决了此问题，
+#### <span id = "103"> Kotlin 特性，和 Java 相比有什么不同的地方? </span>
 103. Kotlin 特性，和 Java 相比有什么不同的地方?
   * 能直接与Java相互调用，能与Java工程共存
   * 支持协程
@@ -734,6 +773,7 @@ private int getParents(ViewParents view){
   * message持有handler的引用
   * hansler持有activity的引用
   * 当message有没有被处理的时候，根据这条引用链就知道，会发生Activity的内存泄露
+#### <span id = "105"> 启动一个程序，可以主界面点击图标进入，也可以从一个程序中跳转过去，二者有什么区别？</span>
 105. 启动一个程序，可以主界面点击图标进入，也可以从一个程序中跳转过去，二者有什么区别？
   * 通过主界面进入，就是设置默认启动的activity
   * 从另一个跳转，需要通过intent进行跳转
@@ -744,10 +784,11 @@ private int getParents(ViewParents view){
   * ContentProvider会对外隐藏内部实现，只需要关注访问contentProvider的uri即可
   * contentProvider应用在应用间共享。Sqlite操作本应用程序的数据库。
   * ContentProiver可以对本地文件进行增删改查操作
-188. Service 和 Activity 在同一个线程吗
+107. Service 和 Activity 在同一个线程吗
   * 默认情况下service与activity在同一个线程，都在main Thread，或者ui线程中。
   * 如果在清单文件中指定service的process属性，那么service就在另一个进程中运行。
-189. service弹出toast
+#### <span id = "109"> service弹出toast </span>
+109. service弹出toast
   * Toast必须在UI主线程上才能正常显示，而在Service中是无法获得Acivity的Context的，
   * 在service中想显示出Toast只需将show的消息发送给主线程Looper就可以了，即
 ```java
@@ -759,15 +800,16 @@ Handler handler = new Handler(Looper.getMainLooper());
 				}
 			});
 ```
-190. 请介绍下 ContentProvider 是如何实现数据共享的
+110. 请介绍下 ContentProvider 是如何实现数据共享的
   * ContentProvider是一个对外提供数据的接口，首先需要实现ContentProvider这个接口，然后重写query，insert，getType，delete，update方法，最后在清单文件定义contentProvider的访问uri
-191. Intent 传递数据时，可以传递哪些类型数据？
+111. Intent 传递数据时，可以传递哪些类型数据？
   * 基本数据类型以及对应的数组类型
   * 可以传递bundle类型，但是bundle类型的数据需要实现Serializable或者parcelable接口
-192. 四大组件的架构模式
+#### <span id = "112"> 四大组件的架构模式</span>
+112. 四大组件的架构模式
   * Activity负责用户界面， service在后台执行操作，广播监听系统事件，contentprovider存储应用程序数据
   * Content Provider(模型）- Activity(视图）- Service(控制器） 
-193. Manifest.xml文件中主要包括哪些信息？
+113. Manifest.xml文件中主要包括哪些信息？
   ```java
     manifest：根节点，描述了package中所有的内容。
     uses-permission：请求你的package正常运作所需赋予的安全许可。
@@ -779,17 +821,18 @@ Handler handler = new Handler(Looper.getMainLooper());
     service：Service是能在后台运行任意时间的组件。
     provider：ContentProvider是用来管理持久化数据并发布给其他应用程序使用的组件。
   ```
-194. 子线程发消息到主线程进行更新 UI，除了 handler 和 AsyncTask，还有什么？
+#### <span id = "114"> 子线程发消息到主线程进行更新 UI，除了 handler 和 AsyncTask，还有什么？</span>
+114. 子线程发消息到主线程进行更新 UI，除了 handler 和 AsyncTask，还有什么？
   * 在子线程中通过 runOnUiThread()方法更新 UI：
   * View.post(Runnable r)方法更新 UI.子线程不能进行UI操作，有一些需要延迟执行的操作，虽然可以通过handler执行但是容易内存泄露，因此View.post() or View.postDelay() 来代替 Handler 使用。
-195. 服务与线程
+115. 服务与线程
   * 服务不是线程，可以在线程中工作
   * 在应用中，如果是长时间的在后台运行，而且不需要交互的情况下，使用服务
   * 同样是在后台运行，不需要交互的情况下，如果只是完成某个任务，之后就不需要运行，而且可能是多个任务，需要长时间运行的情况下使用线程
   * 如果任务占用CPU时间多，资源大的情况下，要使用线程
   * Thread的运行是独立于Activity的，也就是说当一个Activity被finish之后，如果你没有主动停止Thread或者Thread里的run方法没有执行完毕的话，Thread就会一直执行。
 
-196. 设计一个图片的异步加载框架
+116. 设计一个图片的异步加载框架
   * 肯定要用到图片加载的三级缓存的思想。三级缓存分为内存缓存、本地缓存和网络缓存。
   * 内存缓存：将Bitmap缓存到内存中，运行速度快，但是内存容量小。 
   * 本地缓存：将图片缓存到文件中，速度较慢，但容量较大。 
